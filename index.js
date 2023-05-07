@@ -12,7 +12,7 @@ import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
 // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
-await fs.mkdir("./out/wiki", { recursive: true });
+await fs.mkdir("./out/docs", { recursive: true });
 
 // Thank you #ChatGPT
 function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
@@ -108,7 +108,7 @@ for(var i = 0; i < filepaths.length; i++) {
         if (Object.keys(parsed_yaml).includes("uuid")){
           // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
           // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
+          await fs.writeFile(`./out/docs/${parsed_yaml.uuid}.md`, doc)
           site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
           site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
@@ -125,7 +125,7 @@ for(var i = 0; i < filepaths.length; i++) {
           })
           // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
           // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
+          await fs.writeFile(`./out/docs/${parsed_yaml.uuid}.md`, doc)
           site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
           site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
@@ -145,7 +145,7 @@ let test_obj = {
 console.log(site_data.uuid_list)
 
 for(var i = 0; i < site_data.uuid_list.length; i++){
-  let doc = await fs.readFile(`./out/wiki/${site_data.uuid_list[i]}.md`)
+  let doc = await fs.readFile(`./out/docs/${site_data.uuid_list[i]}.md`)
   let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
   console.log(wikilinks)
   for(var k = 0; k < wikilinks.length; k++){
@@ -153,12 +153,12 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
   }
   let raw_links = []
   for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](./${wikilinks[j].link})`)
+    raw_links.push(`[${wikilinks[j].text}](/${wikilinks[j].link})`)
   }
   console.log("replaceWikiLinks")
   let result = replaceWikiLinks(doc.toString(), raw_links)
-  await fs.writeFile(`./out/wiki/${site_data.uuid_list[i]}.md`, result)
+  await fs.writeFile(`./out/docs/${site_data.uuid_list[i]}.md`, result)
 };
 
 await fs.writeFile('./out/site_data.json', JSON.stringify(site_data));
-await fs.copyFile(`./out/wiki/${site_data.filename_uuid["index"]}.md`, "./out/index.md")
+await fs.copyFile(`./out/docs/${site_data.filename_uuid["index"]}.md`, "./out/docs/index.md")
