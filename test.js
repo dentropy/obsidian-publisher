@@ -11,6 +11,9 @@ import { glob } from 'glob';
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
+// Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
+await fs.mkdir("./out/wiki", { recursive: true });
+
 // Thank you #ChatGPT
 function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
   // Match YAML front matter using regular expression
@@ -55,11 +58,9 @@ function replaceWikiLinks(content, replacements) {
 }
 
 
-
-
 // Get all markdown files
-//const pattern = 'pkm/**/*.md';
-const pattern = 'pkm/index.md';
+const pattern = 'pkm/**/*.md';
+// const pattern = 'index.md';
 const filepaths = glob.sync(pattern);
 
 console.log("filepaths")
@@ -67,8 +68,7 @@ console.log(filepaths)
 console.log("Done filepaths\n")
 
 let site_data = {
-  markdown_syntax_tree : {},
-  raw_markdown : {},
+  uuid_list : [],
   filename_uuid : {},
   filepath_uuid : {},
   site_hierarchy : {}
@@ -106,10 +106,12 @@ for(var i = 0; i < filepaths.length; i++) {
     if ( Object.keys(parsed_yaml).includes("share") )  {
       if (parsed_yaml["share"] == true){
         if (Object.keys(parsed_yaml).includes("uuid")){
-          site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
-          site_data.raw_markdown[parsed_yaml.uuid] = doc
+          // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
+          // site_data.raw_markdown[parsed_yaml.uuid] = doc
+          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
+          site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop()] = parsed_yaml.uuid
+          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
         }
         else {
           parsed_yaml.uuid = uuidv4();
@@ -121,10 +123,12 @@ for(var i = 0; i < filepaths.length; i++) {
             extensions: [frontmatter(['yaml', 'toml']), syntax()],
             mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
           })
-          site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
-          site_data.raw_markdown[parsed_yaml.uuid] = doc
+          // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
+          // site_data.raw_markdown[parsed_yaml.uuid] = doc
+          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
+          site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop()] = parsed_yaml.uuid
+          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
         }
       }
       console.log(`Parsed ${filepaths[i]}`)
@@ -138,31 +142,22 @@ let test_obj = {
   "Dentropy's Favorite Apps" : "TEST4"
 }
 
-Object.keys(site_data.raw_markdown).forEach(key => {
-  console.log(`Key: ${key}: \n${site_data.raw_markdown[key]}`);
-  let wikilinks = extractWikiLinksFromMarkdown(site_data.raw_markdown[key])
+console.log(site_data.uuid_list)
+
+for(var i = 0; i < site_data.uuid_list.length; i++){
+  let doc = await fs.readFile(`./out/wiki/${site_data.uuid_list[i]}.md`)
+  let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
   console.log(wikilinks)
-  for(var i = 0; i < wikilinks.length; i++){
-    wikilinks[i].link = test_obj[wikilinks[i].link] 
+  for(var k = 0; k < wikilinks.length; k++){
+    wikilinks[k].link = test_obj[wikilinks[k].link] 
   }
-  console.log(wikilinks)
   let raw_links = []
   for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](${wikilinks[j].link})`)
+    raw_links.push(`[${wikilinks[j].text}](./wiki/${wikilinks[j].link})`)
   }
   console.log("replaceWikiLinks")
-  let result = replaceWikiLinks(site_data.raw_markdown[key].toString(), raw_links)
-  console.log(result)
-});
+  let result = replaceWikiLinks(doc.toString(), raw_links)
+  await fs.writeFile(`./out/wiki/${site_data.uuid_list[i]}.md`, result)
+};
 
-// console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
-
-
-
-// Build site map, Check for and add UUID
-
-
-// Learn NextJS
-
-// console.log(util.inspect(tree, {showHidden: false, depth: null, colors: true}))
-
+await fs.writeFile('./out/site_data.json', JSON.stringify(site_data));
