@@ -12,7 +12,7 @@ import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
 // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
-await fs.mkdir("./out", { recursive: true });
+await fs.mkdir("./out/wiki", { recursive: true });
 
 // Thank you #ChatGPT
 function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
@@ -59,8 +59,8 @@ function replaceWikiLinks(content, replacements) {
 
 
 // Get all markdown files
-//const pattern = 'pkm/**/*.md';
-const pattern = 'index.md';
+const pattern = 'pkm/**/*.md';
+// const pattern = 'index.md';
 const filepaths = glob.sync(pattern);
 
 console.log("filepaths")
@@ -108,10 +108,10 @@ for(var i = 0; i < filepaths.length; i++) {
         if (Object.keys(parsed_yaml).includes("uuid")){
           // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
           // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/${parsed_yaml.uuid}.md`, doc)
+          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
           site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop()] = parsed_yaml.uuid
+          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
         }
         else {
           parsed_yaml.uuid = uuidv4();
@@ -125,10 +125,10 @@ for(var i = 0; i < filepaths.length; i++) {
           })
           // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
           // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/${parsed_yaml.uuid}.md`, doc)
+          await fs.writeFile(`./out/wiki/${parsed_yaml.uuid}.md`, doc)
           site_data.uuid_list.push(parsed_yaml.uuid)
           site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop()] = parsed_yaml.uuid
+          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
         }
       }
       console.log(`Parsed ${filepaths[i]}`)
@@ -145,29 +145,20 @@ let test_obj = {
 console.log(site_data.uuid_list)
 
 for(var i = 0; i < site_data.uuid_list.length; i++){
-  let doc = await fs.readFile(`./out/${site_data.uuid_list[i]}.md`)
+  let doc = await fs.readFile(`./out/wiki/${site_data.uuid_list[i]}.md`)
   let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
   console.log(wikilinks)
   for(var k = 0; k < wikilinks.length; k++){
-    wikilinks[k].link = test_obj[wikilinks[k].link] 
+    wikilinks[k].link = site_data.filename_uuid[wikilinks[k].link] 
   }
   let raw_links = []
   for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](${wikilinks[j].link})`)
+    raw_links.push(`[${wikilinks[j].text}](./${wikilinks[j].link})`)
   }
   console.log("replaceWikiLinks")
   let result = replaceWikiLinks(doc.toString(), raw_links)
-  await fs.writeFile(`./out/${site_data.uuid_list[i]}.md`, result)
+  await fs.writeFile(`./out/wiki/${site_data.uuid_list[i]}.md`, result)
 };
 
-// console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
-
-
-
-// Build site map, Check for and add UUID
-
-
-// Learn NextJS
-
-// console.log(util.inspect(tree, {showHidden: false, depth: null, colors: true}))
-
+await fs.writeFile('./out/site_data.json', JSON.stringify(site_data));
+await fs.copyFile(`./out/wiki/${site_data.filename_uuid["index"]}.md`, "./out/index.md")
