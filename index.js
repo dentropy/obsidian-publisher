@@ -22,3 +22,4 @@ const tree = fromMarkdown(doc, {
 
 // console.log(tree)
 console.log(util.inspect(tree, {showHidden: false, depth: null, colors: true}))
+
