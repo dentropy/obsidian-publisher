@@ -153,7 +153,7 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
   }
   let raw_links = []
   for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](/${wikilinks[j].link})`)
+    raw_links.push(`[${wikilinks[j].text}](../${wikilinks[j].link})`)
   }
   console.log("replaceWikiLinks")
   let result = replaceWikiLinks(doc.toString(), raw_links)
@@ -162,3 +162,4 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
 
 await fs.writeFile('./out/site_data.json', JSON.stringify(site_data));
 await fs.copyFile(`./out/docs/${site_data.filename_uuid["index"]}.md`, "./out/docs/index.md")
+await fs.copyFile(`./out/docs/${site_data.filename_uuid["index"]}.md`, "./out/index.md")

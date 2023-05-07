@@ -1,7 +1,8 @@
 pkm
 pkm_bk
 out
-site
+site/docs
+site/site
 # Logs
 logs
 *.log
