@@ -11,8 +11,11 @@ import { glob } from 'glob';
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
+
+// Create a folder for the processed markdown that will turn into the static site
 // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
 await fs.mkdir("./out/wiki", { recursive: true });
+
 
 // Thank you #ChatGPT
 function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
@@ -67,6 +70,7 @@ console.log("filepaths")
 console.log(filepaths)
 console.log("Done filepaths\n")
 
+// site_data keeps track of what markdown files map to what UUID's
 let site_data = {
   uuid_list : [],
   filename_uuid : {},
@@ -74,6 +78,7 @@ let site_data = {
   site_hierarchy : {}
 }
 
+// Loop through all files from pkm and move them to ./out/wiki
 for(var i = 0; i < filepaths.length; i++) {
     let doc = await fs.readFile(filepaths[i])
     let tree = fromMarkdown(doc, {
@@ -104,6 +109,12 @@ for(var i = 0; i < filepaths.length; i++) {
       continue
     }
     if ( Object.keys(parsed_yaml).includes("share") )  {
+      if (! ("share" in parsed_yaml) ){
+        parsed_yaml.uuid = uuidv4();
+        parsed_yaml.share = false
+        let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+        await fs.writeFile(filepaths[i], new_md_file)
+      }
       if (parsed_yaml["share"] == true){
         if (Object.keys(parsed_yaml).includes("uuid")){
           // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
@@ -135,14 +146,13 @@ for(var i = 0; i < filepaths.length; i++) {
     }
 }
 
-let test_obj = {
-  "Dentropy's Blog Posts and Videos" : "TEST1",
-  "Dentropy's Projects" : "TEST2",
-  "Dentropy Deamon Intro" : "TEST3",
-  "Dentropy's Favorite Apps" : "TEST4"
-}
-
-console.log(site_data.uuid_list)
+// let test_obj = {
+//   "Dentropy's Blog Posts and Videos" : "TEST1",
+//   "Dentropy's Projects" : "TEST2",
+//   "Dentropy Deamon Intro" : "TEST3",
+//   "Dentropy's Favorite Apps" : "TEST4"
+// }
+// console.log(site_data.uuid_list)
 
 for(var i = 0; i < site_data.uuid_list.length; i++){
   let doc = await fs.readFile(`./out/wiki/${site_data.uuid_list[i]}.md`)

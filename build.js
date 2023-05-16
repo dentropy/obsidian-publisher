@@ -75,6 +75,7 @@ let site_data = {
 }
 
 for(var i = 0; i < filepaths.length; i++) {
+// for(var i = 0; i < 100; i++) {
     let doc = await fs.readFile(filepaths[i])
     let tree = fromMarkdown(doc, {
       extensions: [frontmatter(['yaml', 'toml']), syntax()],
@@ -90,18 +91,18 @@ for(var i = 0; i < filepaths.length; i++) {
           parsed_yaml = yaml.parse(tree["children"][0].value)
         }
         else {
-          console.log(`Skipped ${filepaths[i]}`)
-          continue
+          parsed_yaml.uuid = uuidv4();
+          parsed_yaml.share = false
+          let new_md_file = '```\n' + yaml.stringify(parsed_yaml) + '```\n' + doc.toString()
+          await fs.writeFile(filepaths[i], new_md_file)
         }
       }
       else {
-        console.log(`Skipped ${filepaths[i]}`)
-        continue
+        parsed_yaml.uuid = uuidv4();
+        parsed_yaml.share = false
+        let new_md_file = '```\n' + yaml.stringify(parsed_yaml) + '```\n' + doc.toString()
+        await fs.writeFile(filepaths[i], new_md_file)
       }
-    }
-    else {
-      console.log(`Skipped ${filepaths[i]}`)
-      continue
     }
     if ( Object.keys(parsed_yaml).includes("share") )  {
       if (parsed_yaml["share"] == true){
