@@ -93,14 +93,14 @@ for(var i = 0; i < filepaths.length; i++) {
         else {
           parsed_yaml.uuid = uuidv4();
           parsed_yaml.share = false
-          let new_md_file = '```\n' + yaml.stringify(parsed_yaml) + '```\n' + doc.toString()
+          let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
           await fs.writeFile(filepaths[i], new_md_file)
         }
       }
       else {
         parsed_yaml.uuid = uuidv4();
         parsed_yaml.share = false
-        let new_md_file = '```\n' + yaml.stringify(parsed_yaml) + '```\n' + doc.toString()
+        let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
         await fs.writeFile(filepaths[i], new_md_file)
       }
     }
