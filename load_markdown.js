@@ -42,6 +42,66 @@ function extractWikiLinksFromMarkdown(content) {
   return wikiLinks;
 }
 
+function removeYamlFromMarkdown(markdown) {
+  const lines = markdown.trim().split('\n');
+
+  if (lines[0].trim() === '---') {
+    let index = lines.indexOf('---', 1);
+    if (index !== -1) {
+      lines.splice(0, index + 1);
+    }
+  }
+
+  const updatedMarkdown = lines.join('\n').trim();
+  return updatedMarkdown;
+}
+
+// Function to update wikilinks with markdown links, with help from #ChatGPT
+async function addInEmbeddedNotes(content) {
+  // Find Embeds
+  // Regular expression to match wiki links
+  let wikiLinkRegex = /\!\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
+  // Array to store extracted wiki links
+  let wikiEmbeds = [];
+  // Iterate over each match and extract the link and text
+  let match;
+  while ((match = wikiLinkRegex.exec(content))) {
+    const link = match[1];
+    const text = match[2] || link; // If no text is provided, use the link itself
+    wikiEmbeds.push({ link, text });
+  }
+  let replacements = wikiEmbeds
+
+  
+  // Find note to embed
+  for(var k = 0; k < wikiEmbeds.length; k++){
+    wikiEmbeds[k].link = site_data.filename_uuid[wikiEmbeds[k].link] 
+  }
+  let raw_links = []
+  for(var j = 0; j < wikiEmbeds.length; j++){
+    let file_contents = "No File Found"
+    try {
+      file_contents = await fs.readFile("./out/docs/" + wikiEmbeds[j].link +".md")
+    } catch (error) {
+      console.log("Could not find file")
+    }
+    raw_links.push(removeYamlFromMarkdown(String(file_contents)))
+  }
+
+
+  // Replace Embeds
+  wikiLinkRegex = /\!\[\[.*?\]\]/g;
+  const regex = new RegExp(wikiLinkRegex, 'g');
+  const matches = content.match(regex);
+  const count = matches ? matches.length : 0;
+  const singleWikiLinkRegex = /\!\[\[.*?\]\]/;
+  for(var i = 0; i < raw_links.length; i++){
+    content = content.replace(singleWikiLinkRegex, raw_links[i]);
+  }
+  console.log(count)
+  return content;
+}
+
 // Function to update wikilinks with markdown links, with help from #ChatGPT
 function replaceWikiLinks(content, replacements) {
   const wikiLinkRegex = /\[\[.*?\]\]/g;
@@ -147,6 +207,11 @@ console.log(site_data.uuid_list)
 
 for(var i = 0; i < site_data.uuid_list.length; i++){
   let doc = await fs.readFile(`./out/docs/${site_data.uuid_list[i]}.md`)
+  // Embedded Notes
+  console.log("addInEmbeddedNotes")
+  doc = await addInEmbeddedNotes(doc.toString())
+
+  // Wiki Links
   let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
   console.log(wikilinks)
   for(var k = 0; k < wikilinks.length; k++){
