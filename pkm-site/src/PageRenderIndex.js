@@ -1,19 +1,18 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
-const PageRenderer = () => {
-  const { pageName } = useParams();
+const PageRendererIndex = () => {
 
   // Map the page name to the corresponding HTML file
-  const getPagePath = (pageName) => {
-    return `/pages/${pageName}.html`;
+  const getPagePath = () => {
+    return `/pages/index.html`;
   };
 
   return (
     <div>
       <iframe 
-        src={getPagePath(pageName)} 
-        title={pageName} 
+        src={getPagePath()}
+        title={"index"}
         style={{
           height: '100vh',
           position: 'fixed',
@@ -26,4 +25,4 @@ const PageRenderer = () => {
   );
 };
 
-export default PageRenderer;
+export default PageRendererIndex;

@@ -219,7 +219,7 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
   }
   let raw_links = []
   for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](../${wikilinks[j].link})`)
+    raw_links.push(`[${wikilinks[j].text}](../pages/${wikilinks[j].link})`)
   }
   console.log("replaceWikiLinks")
   let result = replaceWikiLinks(doc.toString(), raw_links)
