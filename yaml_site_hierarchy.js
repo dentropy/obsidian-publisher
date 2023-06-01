@@ -1,10 +1,9 @@
 import fs from 'fs';
-import util from "util";
 import yaml from 'js-yaml'
 
-let rawdata = JSON.parse(fs.readFileSync('./out/site_data.json'));
+let site_data = JSON.parse(fs.readFileSync('./out/site_data.json'));
 
-let note_filepaths = Object.keys(rawdata.filepath_uuid)
+let note_filepaths = Object.keys(site_data.filepath_uuid)
 note_filepaths = note_filepaths.sort()
 
 
@@ -12,7 +11,7 @@ let notes_with_metadata = []
 note_filepaths.forEach(note_path => {
   notes_with_metadata.push({
     note_path: note_path,
-    uuid:  rawdata.filepath_uuid[note_path],
+    uuid:  site_data.filepath_uuid[note_path],
     parsed: String(note_path).split('/'),
     parsed_length: String(note_path).split('/').length
   })  
@@ -85,5 +84,6 @@ notes_with_metadata.forEach(note => {
 })
 
 const yamlData = yaml.dump(fileStructure, { indent: 2 });
+let mkdocs_yml = fs.readFileSync('./mkdocs-bak.yml')
 fs.writeFileSync('output.json', JSON.stringify(fileStructure));
-fs.writeFileSync('output.yaml', yamlData);
+fs.writeFileSync('output.yaml', mkdocs_yml + yamlData);

@@ -257,5 +257,4 @@ Object.keys(site_data.filepath_uuid).forEach(key => {
 
 
 await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
-await fs.copyFile(`${out_path}/docs/${site_data.filename_uuid["index"]}.md`, "${out_path}/docs/index.md")
-await fs.copyFile(`${out_path}/docs/${site_data.filename_uuid["index"]}.md`, "${out_path}/index.md")
+await fs.copyFile(`${out_path}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
