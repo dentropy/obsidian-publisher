@@ -1,9 +1,12 @@
 site_name: Dentropy's PKM
 site_url: https://dentropy.github.io/
+docs_dir: markdown_files
+site_dir: docs
 theme:
   name: material
   features:
     - navigation.indexes
+    - navigation.tabs.sticky
 plugins:
   - search:
       lang: en

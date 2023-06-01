@@ -1,5 +1,6 @@
 import fs from 'fs';
 import yaml from 'js-yaml'
+const out_path = './site/docs'
 
 let site_data = JSON.parse(fs.readFileSync('./out/site_data.json'));
 
@@ -85,5 +86,5 @@ notes_with_metadata.forEach(note => {
 
 const yamlData = yaml.dump(fileStructure, { indent: 2 });
 let mkdocs_yml = fs.readFileSync('./mkdocs-bak.yml')
-fs.writeFileSync('output.json', JSON.stringify(fileStructure));
-fs.writeFileSync('output.yaml', mkdocs_yml + yamlData);
+fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure)); // This is technically not used, but a nice to have
+fs.writeFileSync(`${out_path}/mkdocs.yaml`, mkdocs_yml + yamlData);
