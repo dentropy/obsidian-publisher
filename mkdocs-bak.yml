@@ -1,0 +1,10 @@
+site_name: Dentropy's PKM
+site_url: https://dentropy.github.io/
+theme:
+  name: material
+  features:
+    - navigation.indexes
+plugins:
+  - search:
+      lang: en
+nav:

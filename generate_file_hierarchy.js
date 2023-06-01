@@ -18,12 +18,6 @@ function createRecursiveObject(obj, keys, uuid) {
   return createRecursiveObject(obj[currentKey], keys.slice(1), uuid);
 }
 
-console.log(util.inspect(rawdata, {showHidden: false, depth: null, colors: true}))
-
-console.log(Object.keys(rawdata))
-
-console.log(util.inspect(rawdata.filepath_uuid, {showHidden: false, depth: null, colors: true}))
-
 let myObject = {}
 Object.keys(rawdata.filepath_uuid).forEach(key => {
   const value = rawdata.filepath_uuid[key];
@@ -33,5 +27,6 @@ Object.keys(rawdata.filepath_uuid).forEach(key => {
   console.log(split_filepath)
   createRecursiveObject(myObject, split_filepath, value);
 });
-console.log(util.inspect(myObject, {showHidden: false, depth: null, colors: true}))
-console.log(util.inspect(Object.keys(myObject), {showHidden: false, depth: null, colors: true}))
+
+rawdata.site_hierarchy = myObject
+fs.writeFileSync('./out/site_data.json', JSON.stringify(rawdata));

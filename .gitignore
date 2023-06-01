@@ -3,6 +3,8 @@ pkm_bk
 out
 site/docs
 site/site
+output*
+
 # Logs
 logs
 *.log
