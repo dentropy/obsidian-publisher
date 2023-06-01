@@ -11,10 +11,21 @@ import { glob } from 'glob';
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
+// Manual Settings
+// const pattern = 'index.md';
+const pattern = 'pkm/**/*.md';
+const offset_index = 2;
+// const out_path = "./out/docs"
+const out_path = './site/docs'
 // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
-await fs.mkdir("./out/docs", { recursive: true });
+await fs.mkdir(out_path, { recursive: true });
 
-// Thank you #ChatGPT
+
+
+// Helper Functions
+
+
+
 function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
   // Match YAML front matter using regular expression
   const regex = /^---\n([\s\S]+?)\n---\n/;
@@ -81,7 +92,7 @@ async function addInEmbeddedNotes(content) {
   for(var j = 0; j < wikiEmbeds.length; j++){
     let file_contents = "No File Found"
     try {
-      file_contents = await fs.readFile("./out/docs/" + wikiEmbeds[j].link +".md")
+      file_contents = await fs.readFile(out_path + wikiEmbeds[j].link +".md")
     } catch (error) {
       console.log("Could not find file")
     }
@@ -117,15 +128,27 @@ function replaceWikiLinks(content, replacements) {
   return content;
 }
 
+function createRecursiveObject(obj, keys, uuid) {
+  if (keys.length === 0) {
+    obj.uuid = uuid
+    return obj; // Return the final object
+  }
+  const currentKey = keys[0];
+  if (!obj.hasOwnProperty(currentKey) || typeof obj[currentKey] !== 'object') {
+    obj[currentKey] = {}; // Create the property if it doesn't exist or is not an object
+  }
+
+  return createRecursiveObject(obj[currentKey], keys.slice(1), uuid);
+}
+
+
+
+// Real stuff starts here
+
+
 
 // Get all markdown files
-const pattern = 'pkm/**/*.md';
-// const pattern = 'index.md';
 const filepaths = glob.sync(pattern);
-
-console.log("filepaths")
-console.log(filepaths)
-console.log("Done filepaths\n")
 
 let site_data = {
   uuid_list : [],
@@ -134,67 +157,61 @@ let site_data = {
   site_hierarchy : {}
 }
 
-for(var i = 0; i < filepaths.length; i++) {
-// for(var i = 0; i < 100; i++) {
-    let doc = await fs.readFile(filepaths[i])
-    let tree = fromMarkdown(doc, {
-      extensions: [frontmatter(['yaml', 'toml']), syntax()],
-      mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
-    })
-    let parsed_yaml = {}
 
-    // Extract Yaml
-    console.log(filepaths[i])
-    if( Object.keys(tree).includes("children") ){
-      if (tree["children"].length >= 1){
-        if(tree["children"][0].type == "yaml"){
-          parsed_yaml = yaml.parse(tree["children"][0].value)
-        }
-        else {
-          parsed_yaml.uuid = uuidv4();
-          parsed_yaml.share = false
-          let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-          await fs.writeFile(filepaths[i], new_md_file)
-        }
-      }
-      else {
+for (var i = 0; i < filepaths.length; i++) {
+  // for(var i = 0; i < 100; i++) { // For Testing on large PKM
+
+  // Read markdown file and turn it into syntax tree
+  let doc = await fs.readFile(filepaths[i])
+  let tree = fromMarkdown(doc, {
+    extensions: [frontmatter(['yaml', 'toml']), syntax()],
+    mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
+  })
+
+  // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
+  let parsed_yaml = {}
+  if (Object.keys(tree).includes("children")) {
+    if (tree["children"].length >= 1) {
+      if (tree["children"][0].type == "yaml") {
+        parsed_yaml = yaml.parse(tree["children"][0].value)
+      } else {
         parsed_yaml.uuid = uuidv4();
         parsed_yaml.share = false
         let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
         await fs.writeFile(filepaths[i], new_md_file)
       }
+    } else {
+      parsed_yaml.uuid = uuidv4();
+      parsed_yaml.share = false
+      let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+      await fs.writeFile(filepaths[i], new_md_file)
     }
-    if ( Object.keys(parsed_yaml).includes("share") )  {
-      if (parsed_yaml["share"] == true){
-        if (Object.keys(parsed_yaml).includes("uuid")){
-          // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
-          // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/docs/${parsed_yaml.uuid}.md`, doc)
-          site_data.uuid_list.push(parsed_yaml.uuid)
-          site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
-        }
-        else {
-          parsed_yaml.uuid = uuidv4();
-          let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
-          let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-          await fs.writeFile(filepaths[i], new_md_file)
-          doc = await fs.readFile(filepaths[i])
-          let tree = fromMarkdown(doc, {
-            extensions: [frontmatter(['yaml', 'toml']), syntax()],
-            mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
-          })
-          // site_data.markdown_syntax_tree[parsed_yaml.uuid] = tree
-          // site_data.raw_markdown[parsed_yaml.uuid] = doc
-          await fs.writeFile(`./out/docs/${parsed_yaml.uuid}.md`, doc)
-          site_data.uuid_list.push(parsed_yaml.uuid)
-          site_data.filepath_uuid[filepaths[i]] = parsed_yaml.uuid
-          site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
-        }
+  }
+  if (Object.keys(parsed_yaml).includes("share")) {
+    if (parsed_yaml["share"] == true) {
+      // If there is already a UUID in the markdown file YAML
+      if (!Object.keys(parsed_yaml).includes("uuid")) {
+        // If there is not a UUID in the original markdown file add one
+        parsed_yaml.uuid = uuidv4();
+        let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
+        let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+        await fs.writeFile(filepaths[i], new_md_file)
+        doc = await fs.readFile(filepaths[i])
       }
-      console.log(`Parsed ${filepaths[i]}`)
+      await fs.writeFile(`${out_path}/${parsed_yaml.uuid}.md`, doc)
+      site_data.uuid_list.push(parsed_yaml.uuid)
+      site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
+      site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
     }
+  }
+  console.log(`Parsed ${filepaths[i]}`)
 }
+
+
+
+// Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
+
+
 
 let test_obj = {
   "Dentropy's Blog Posts and Videos" : "TEST1",
@@ -203,17 +220,15 @@ let test_obj = {
   "Dentropy's Favorite Apps" : "TEST4"
 }
 
-console.log(site_data.uuid_list)
-
 for(var i = 0; i < site_data.uuid_list.length; i++){
-  let doc = await fs.readFile(`./out/docs/${site_data.uuid_list[i]}.md`)
-  // Embedded Notes
-  console.log("addInEmbeddedNotes")
+  // Embedding Notes
+  console.log(`Performing addInEmbeddedNotes on ${out_path}/${site_data.uuid_list[i]}.md`)
+  let doc = await fs.readFile(`${out_path}/${site_data.uuid_list[i]}.md`)
   doc = await addInEmbeddedNotes(doc.toString())
 
-  // Wiki Links
+  // Changing WikiLinks to connect to UUID filename
+  console.log(`Performing replaceWikiLinks on ${out_path}/${site_data.uuid_list[i]}.md`)
   let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
-  console.log(wikilinks)
   for(var k = 0; k < wikilinks.length; k++){
     wikilinks[k].link = site_data.filename_uuid[wikilinks[k].link] 
   }
@@ -221,11 +236,26 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
   for(var j = 0; j < wikilinks.length; j++){
     raw_links.push(`[${wikilinks[j].text}](../pages/${wikilinks[j].link})`)
   }
-  console.log("replaceWikiLinks")
   let result = replaceWikiLinks(doc.toString(), raw_links)
-  await fs.writeFile(`./out/docs/${site_data.uuid_list[i]}.md`, result)
+  await fs.writeFile(`${out_path}/${site_data.uuid_list[i]}.md`, result)
 };
 
-await fs.writeFile('./out/site_data.json', JSON.stringify(site_data));
-await fs.copyFile(`./out/docs/${site_data.filename_uuid["index"]}.md`, "./out/docs/index.md")
-await fs.copyFile(`./out/docs/${site_data.filename_uuid["index"]}.md`, "./out/index.md")
+
+
+// Generate site_date.site_hierarchy, note this is not technically required
+
+
+
+Object.keys(site_data.filepath_uuid).forEach(key => {
+  const value = site_data.filepath_uuid[key];
+  console.log(`site_hierarchy key:${key},  value:${value} added`);
+  let key_from_pkm_path = key.replace("/home/paul/Documents/", "");
+  let split_filepath = key_from_pkm_path.split('/')
+  createRecursiveObject(site_data.site_hierarchy, split_filepath, value);
+});
+
+
+
+await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
+await fs.copyFile(`${out_path}/docs/${site_data.filename_uuid["index"]}.md`, "${out_path}/docs/index.md")
+await fs.copyFile(`${out_path}/docs/${site_data.filename_uuid["index"]}.md`, "${out_path}/index.md")

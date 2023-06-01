@@ -34,7 +34,7 @@ let test_yaml = [{
 
 
 
-/// CHAT GPT
+/// CHAT GPT Functions
 
 // Initialize the data structure
 let fileStructure = [];
