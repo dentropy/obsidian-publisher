@@ -146,6 +146,19 @@ function createRecursiveObject(obj, keys, uuid) {
   return createRecursiveObject(obj[currentKey], keys.slice(1), uuid);
 }
 
+// https://sharegpt.com/c/fsZTWHu
+function extractImagesFromMarkdown(markdownString) {
+  const imageUrls = [];
+  const imageRegex = /!\[.*?\]\((.*?)\)/g;
+  let match;
+
+  while ((match = imageRegex.exec(markdownString)) !== null) {
+    imageUrls.push(match[1]);
+  }
+
+  return imageUrls;
+}
+
 
 
 // Real stuff starts here
@@ -235,8 +248,8 @@ let test_obj = {
   "Dentropy's Favorite Apps" : "TEST4"
 }
 
+// Embedding Notes
 for(var i = 0; i < site_data.uuid_list.length; i++){
-  // Embedding Notes
   console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
   let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
   doc = await addInEmbeddedNotes(doc.toString())
@@ -253,6 +266,24 @@ for(var i = 0; i < site_data.uuid_list.length; i++){
   }
   let result = replaceWikiLinks(doc.toString(), raw_links)
   await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
+};
+
+// Checking for images in markdown documents
+site_data.images = []
+for(var i = 0; i < site_data.uuid_list.length; i++){
+  console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+  let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+  let extracted_images = extractImagesFromMarkdown(doc)
+  if ( extracted_images.length > 0) {
+    site_data.images.push( { 
+      note_uuid : site_data.uuid_list[i],
+      image_links : extracted_images
+    } )
+  }
+  // Check if extracted_images are file system images or links
+
+  // Move files over to site folder
+
 };
 
 
