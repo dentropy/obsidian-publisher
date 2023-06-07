@@ -174,6 +174,7 @@ for (var i = 0; i < filepaths.length; i++) {
   let parsed_yaml = {}
   if (Object.keys(tree).includes("children")) {
     if (tree["children"].length >= 1) {
+      // This if else statement edits the original markdown note in the Obsidian Vault
       if (tree["children"][0].type == "yaml") {
         parsed_yaml = yaml.parse(tree["children"][0].value)
       } else {
@@ -189,6 +190,9 @@ for (var i = 0; i < filepaths.length; i++) {
       await fs.writeFile(filepaths[i], new_md_file)
     }
   }
+
+
+  // Save the processed markdown into the mkdocs folder with filename as uuid of note
   if (Object.keys(parsed_yaml).includes("share")) {
     if (parsed_yaml["share"] == true) {
       // If there is already a UUID in the markdown file YAML
@@ -198,9 +202,15 @@ for (var i = 0; i < filepaths.length; i++) {
         let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
         let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
         await fs.writeFile(filepaths[i], new_md_file)
-        doc = await fs.readFile(filepaths[i])
       }
-      await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, doc)
+      // We get the note_title here because if share:false we do not need to do this processing
+      let note_title = filepaths[i].split('/')
+      note_title = note_title[note_title.length - 1]
+      note_title = note_title.split('.')[0]
+      parsed_yaml.title = note_title
+      let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
+      let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+      await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
       site_data.uuid_list.push(parsed_yaml.uuid)
       site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
       site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
