@@ -5,6 +5,8 @@ site/docs
 site/site
 output*
 site
+*out
+
 # Logs
 logs
 *.log

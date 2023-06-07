@@ -92,11 +92,14 @@ async function addInEmbeddedNotes(content) {
   }
   let raw_links = []
   for(var j = 0; j < wikiEmbeds.length; j++){
+    console.log("wikiEmbeds")
+    console.log(wikiEmbeds)
     let file_contents = "No File Found"
     try {
-      file_contents = await fs.readFile(out_path + wikiEmbeds[j].link +".md")
+      file_contents = await fs.readFile(out_path + "/markdown_files/" + wikiEmbeds[j].link +".md")
     } catch (error) {
-      console.log("Could not find file")
+      console.log("Could not find file error")
+      console.log(String(error))
     }
     raw_links.push(removeYamlFromMarkdown(String(file_contents)))
   }
