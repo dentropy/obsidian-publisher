@@ -29,7 +29,6 @@ cd dentropys-obsidian-publisher
 mkdir pkm
 # Move your obsidian vault files you want in this folder
 node process_markdown.js
-node yaml_site_hierarchy.js
 cd site
 mkdocs build -v
 mkdocs serve -v
