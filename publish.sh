@@ -1,4 +1,5 @@
 #!/bin/bash
+npm install
 export build_path='dentropy.github.io'
 node process_markdown.js
 cd $build_path
