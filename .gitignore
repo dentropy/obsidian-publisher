@@ -8,6 +8,7 @@ site
 *out
 private*
 python*
+out*
 # Logs
 logs
 *.log

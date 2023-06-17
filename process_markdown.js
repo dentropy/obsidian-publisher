@@ -1,17 +1,24 @@
+import util from 'util';
+
+// CLI Stuff
+import readline from 'readline';
+import { Command } from 'commander';
+
+// File System Stuff
 import fs from 'node:fs/promises'
-import { load } from 'js-yaml';
+import { glob } from 'glob';
+
+// Markdown Stuff
 import {fromMarkdown} from 'mdast-util-from-markdown'
 import {toMarkdown} from 'mdast-util-to-markdown'
 import { syntax } from 'micromark-extension-wiki-link'
 import * as wikiLink from 'mdast-util-wiki-link'
 import {frontmatter} from 'micromark-extension-frontmatter'
 import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontmatter'
-import util from 'util';
-import { glob } from 'glob';
+
+// For Markdown Processing
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
-import readline from 'readline';
-import { Command } from 'commander';
 
 // Import Custom Modules
 import { addInEmbeddedNotes } from './lib/addInEmbeddedNotes.js';
@@ -131,8 +138,6 @@ async function build(){
 
 
   for (var i = 0; i < filepaths.length; i++) {
-    // for(var i = 0; i < 100; i++) { // For Testing on large PKM
-
     // Read markdown file and turn it into syntax tree
     let doc = await fs.readFile(filepaths[i])
     let tree = fromMarkdown(doc, {
@@ -141,6 +146,7 @@ async function build(){
     })
 
     // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
+    // #TODO This should be a specific function to be used in scripts
     let parsed_yaml = {}
     if (Object.keys(tree).includes("children")) {
       if (tree["children"].length >= 1) {
