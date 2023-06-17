@@ -1,0 +1,157 @@
+{
+  "main": {
+    "id": "a2bd9e62d2bd7dc2",
+    "type": "split",
+    "children": [
+      {
+        "id": "346bf6a796f442a6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e7717a3718bca5a9",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Blog/The Rise of ChatGPT.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "13d10eea21dc37b9",
+    "type": "split",
+    "children": [
+      {
+        "id": "fbdc7042f05f74e9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "70f800f333ce121d",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "2bb71acfb19c16f4",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "863f36b44243e438",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "06b11c89e288703d",
+    "type": "split",
+    "children": [
+      {
+        "id": "06453a57b3d5e4fe",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8339476aa5ef6d58",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Blog/The Rise of ChatGPT.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "54e9bc56fb493ed9",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Blog/The Rise of ChatGPT.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "d2dd81e6099e4b3e",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "8ca9d731acd235cb",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Blog/The Rise of ChatGPT.md"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "e7717a3718bca5a9",
+  "lastOpenFiles": [
+    "Blog/Learning to Love Myself.md",
+    "Blog/Darwin and The Machines.md",
+    "Context/Sub Embedded Notes Test.md",
+    "Context/Embedded Notes Test.md",
+    "index.md"
+  ]
+}

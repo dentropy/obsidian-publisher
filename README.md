@@ -80,6 +80,16 @@ Change `out_path` to `$YOUR_GITHUB_USERNAME.github.io`
 
 ``` bash
 cd dentropys-obsidian-publisher
+node process_markdown.js -i './test_vault' -o './test_site' -oi 1
+cd  test_site
+mkdocs build -v
+cd docs
+python3 -m http.server
+```
+
+
+``` bash
+cd dentropys-obsidian-publisher
 node process_markdown.js
 ```
 
@@ -116,3 +126,16 @@ git push origin main
 **Wait 10 minutes and check site**
 
 Go to https://$YOUR_GITHUB_USERNAME.github.io cause your site should be up now
+
+## Build With Docker
+
+**Note:** The docker build is not as fully functionally as the CLI, for example you can not build you entire PKM, I chose this intentionally for security reasons
+
+``` bash
+
+cp example_dot_env .env
+$EDITOR .env
+bash container-build.sh
+bash container-run.sh
+sudo chown $USER:$USER ./pkm_out
+```

@@ -6,22 +6,107 @@ import { syntax } from 'micromark-extension-wiki-link'
 import * as wikiLink from 'mdast-util-wiki-link'
 import {frontmatter} from 'micromark-extension-frontmatter'
 import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontmatter'
-import util from "util";
+import util from 'util';
 import { glob } from 'glob';
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
+import readline from 'readline';
 //import yaml from 'js-yaml'
+import { Command } from 'commander';
 
-// Manual Settings
-const pattern = '/home/paul/Documents/Root/**/*.md';
-const offset_index = 5;
-const out_path = './dentropy.github.io'
-const mkfiles_directory_name = 'markdown_files'
-// const pattern = 'index.md';     // For Testing
-// const out_path = "./out/docs"   // For Testing
-// Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
-await fs.mkdir(out_path, { recursive: true });
-await fs.mkdir(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
+// Gotta initialize this first because it is called from inside the functions, no functional programming here bro
+let site_data = {
+  uuid_list : [],
+  filename_uuid : {},
+  filepath_uuid : {},
+  site_hierarchy : {}
+}
+
+
+const program = new Command();
+program
+  .name('dentropys-obsidian-publisher')
+  .description('This project build a static website using mkdocs from your obsidian vault.')
+  .option('-i, --inpath  <string>')
+  .option('-o, --outpath <string>')
+  .option('-oi, --offsetindex <int>')
+  .option('-mkdn, --mkfilesfoldername <string>')
+  .option('-ev, --entire_vault')
+program.parse(process.argv)
+const options = program.opts()
+
+console.log(options)
+let pattern = ''
+if (  !(Object.keys(options).includes("inpath"))  ){
+  console.log("You failed to set input path '-i $FOLDER_PATH' for you markdown documents")
+  process.exit(1);
+}
+else {
+  pattern = options.inpath;
+  if (pattern.charAt(pattern.length - 1) != '/'){
+    pattern += '/'
+  }
+  pattern += '**/*.md'
+}
+
+let out_path = ''
+if (  !(Object.keys(options).includes("outpath"))  ){
+  console.log("You failed to set output path '-o $FOLDER_PATH' for you markdown documents")
+  process.exit(1);
+}
+else {
+  out_path = options.outpath
+}
+
+let offset_index = 0
+if (  (Object.keys(options).includes("offsetindex"))  ){
+  offset_index = options.offsetindex
+}
+
+let mkfiles_directory_name = 'markdown_files'
+if (  (Object.keys(options).includes("mkfilesfoldername"))  ){
+  mkfiles_directory_name = options.mkfilesfoldername
+}
+
+function askForConfirmation(question) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question + ' (y/n) ', (answer) => {
+      const confirmed = answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+      resolve(confirmed);
+      rl.close();
+    });
+  });
+}
+
+console.log(`pattern: ${pattern}`)
+console.log(`out_path: ${out_path}`)
+console.log(`offset_index: ${offset_index}`)
+console.log(`mkfiles_directory_name: ${mkfiles_directory_name}`)
+
+let build_full_site = false
+if (  (Object.keys(options).includes("entire_vault"))  ){
+  const confirmed = await askForConfirmation('Are you sure you want to build EVERYTHING?');
+  if (confirmed) {
+    console.log('Alright let\'s build everything');
+    build()
+  } else {
+    console.log('Aborted.');
+    console.log("Ya gotta be careful")
+    process.exit(1);
+  }
+  await askForConfirmation();
+  console.log(`build_full_site: ${build_full_site}`)
+  build()
+}
+else {
+  console.log(`build_full_site: ${build_full_site}`)
+  build()
+}
 
 
 // Helper Functions
@@ -79,9 +164,18 @@ async function addInEmbeddedNotes(content) {
   // Iterate over each match and extract the link and text
   let match;
   while ((match = wikiLinkRegex.exec(content))) {
-    const link = match[1];
-    const text = match[2] || link; // If no text is provided, use the link itself
-    wikiEmbeds.push({ link, text });
+    console.log(`match ${match[0]}`)
+    console.log(`match ${match[1]}`)
+    console.log(`match ${match[2]}`)
+    let link = match[1];
+    let text = match[2] || link; // If no text is provided, use the link itself
+    let heading = ''
+    if ( text.includes('#') ){
+      text = match[1].split('#')[0];
+      link = text;
+      heading = match[1].split('#')[1];
+    }
+    wikiEmbeds.push({ link, text, heading });
   }
   let replacements = wikiEmbeds
 
@@ -96,7 +190,35 @@ async function addInEmbeddedNotes(content) {
     console.log(wikiEmbeds)
     let file_contents = "No File Found"
     try {
+      // This is where we process the heading
+      // We need the Syntax Tree
+      // We need to search syntax tree for the heading
+      // Then we need to reassemble the markdown file from the syntax tree
       file_contents = await fs.readFile(out_path + "/markdown_files/" + wikiEmbeds[j].link +".md")
+
+      if(wikiEmbeds.heading != ''){
+        let mk_tree = fromMarkdown(file_contents, {
+          extensions: [frontmatter(['yaml', 'toml']), syntax()],
+          mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
+        })
+        let sub_mk_doc = {
+          type: 'root',
+          children: []
+        }
+        for(var item_index = 0; item_index < mk_tree.children.length; item_index++){
+          if(mk_tree.children[item_index].type == 'heading'){
+            if (mk_tree.children[item_index].children[0].value.includes(wikiEmbeds[j].heading)){
+              sub_mk_doc.children.push(mk_tree.children[item_index])
+              while(mk_tree.children[item_index + 1].type != 'heading' && item_index < mk_tree.children.length){
+                sub_mk_doc.children.push(mk_tree.children[item_index + 1])
+                item_index += 1
+              }
+            }
+          }
+        }
+        file_contents = toMarkdown(sub_mk_doc)
+      }
+    
     } catch (error) {
       console.log("Could not find file error")
       console.log(String(error))
@@ -163,234 +285,242 @@ function extractImagesFromMarkdown(markdownString) {
 
 // Real stuff starts here
 
+async function build(){
+  // const pattern = 'index.md';     // For Testing
+  // const out_path = "./out/docs"   // For Testing
+  // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
+  await fs.mkdir(out_path, { recursive: true });
+  await fs.mkdir(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
+
+  // Get all markdown files
+  const filepaths = glob.sync(pattern);
 
 
-// Get all markdown files
-const filepaths = glob.sync(pattern);
+  for (var i = 0; i < filepaths.length; i++) {
+    // for(var i = 0; i < 100; i++) { // For Testing on large PKM
 
-let site_data = {
-  uuid_list : [],
-  filename_uuid : {},
-  filepath_uuid : {},
-  site_hierarchy : {}
-}
+    // Read markdown file and turn it into syntax tree
+    let doc = await fs.readFile(filepaths[i])
+    let tree = fromMarkdown(doc, {
+      extensions: [frontmatter(['yaml', 'toml']), syntax()],
+      mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
+    })
 
-
-for (var i = 0; i < filepaths.length; i++) {
-  // for(var i = 0; i < 100; i++) { // For Testing on large PKM
-
-  // Read markdown file and turn it into syntax tree
-  let doc = await fs.readFile(filepaths[i])
-  let tree = fromMarkdown(doc, {
-    extensions: [frontmatter(['yaml', 'toml']), syntax()],
-    mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
-  })
-
-  // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
-  let parsed_yaml = {}
-  if (Object.keys(tree).includes("children")) {
-    if (tree["children"].length >= 1) {
-      // This if else statement edits the original markdown note in the Obsidian Vault
-      if (tree["children"][0].type == "yaml") {
-        parsed_yaml = yaml.parse(tree["children"][0].value)
+    // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
+    let parsed_yaml = {}
+    if (Object.keys(tree).includes("children")) {
+      if (tree["children"].length >= 1) {
+        // This if else statement edits the original markdown note in the Obsidian Vault
+        if (tree["children"][0].type == "yaml") {
+          parsed_yaml = yaml.parse(tree["children"][0].value)
+        } else {
+          parsed_yaml.uuid = uuidv4();
+          parsed_yaml.share = false
+          let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+          await fs.writeFile(filepaths[i], new_md_file)
+        }
       } else {
         parsed_yaml.uuid = uuidv4();
         parsed_yaml.share = false
         let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
         await fs.writeFile(filepaths[i], new_md_file)
       }
-    } else {
-      parsed_yaml.uuid = uuidv4();
-      parsed_yaml.share = false
-      let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-      await fs.writeFile(filepaths[i], new_md_file)
     }
-  }
 
-
-  // Save the processed markdown into the mkdocs folder with filename as uuid of note
-  if (Object.keys(parsed_yaml).includes("share")) {
-    if (parsed_yaml["share"] == true) {
-      // If there is already a UUID in the markdown file YAML
-      if (!Object.keys(parsed_yaml).includes("uuid")) {
-        // If there is not a UUID in the original markdown file add one
-        parsed_yaml.uuid = uuidv4();
+    // Save the processed markdown into the mkdocs folder with filename as uuid of note
+    if (Object.keys(parsed_yaml).includes("share") || build_full_site == true) {
+      // #TODO will the line below stop memes from receiving UUID's if they are not shared when building site?
+      if (parsed_yaml["share"] == true || build_full_site == true) {
+        // If there is already a UUID in the markdown file YAML
+        if (!Object.keys(parsed_yaml).includes("uuid")) {
+          // If there is not a UUID in the original markdown file add one
+          parsed_yaml.uuid = uuidv4();
+          let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
+          let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+          await fs.writeFile(filepaths[i], new_md_file)
+        }
+        // We get the note_title here because if share:false we do not need to do this processing
+        // We have if statement because title can be hard coded in the original yaml
+        if (!Object.keys(parsed_yaml).includes("title")) {
+          // If title is not in the file add it
+          let note_title = filepaths[i].split('/')
+          note_title = note_title[note_title.length - 1]
+          note_title = note_title.split('.')[0]
+          parsed_yaml.title = note_title
+        }
         let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
         let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-        await fs.writeFile(filepaths[i], new_md_file)
+        await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
+        site_data.uuid_list.push(parsed_yaml.uuid)
+        site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
+        site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
       }
-      // We get the note_title here because if share:false we do not need to do this processing
-      let note_title = filepaths[i].split('/')
-      note_title = note_title[note_title.length - 1]
-      note_title = note_title.split('.')[0]
-      parsed_yaml.title = note_title
-      let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
-      let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-      await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
-      site_data.uuid_list.push(parsed_yaml.uuid)
-      site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
-      site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
     }
+    console.log(`Parsed ${filepaths[i]}`)
   }
-  console.log(`Parsed ${filepaths[i]}`)
-}
 
 
 
-// Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
+  // Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
 
 
 
-let test_obj = {
-  "Dentropy's Blog Posts and Videos" : "TEST1",
-  "Dentropy's Projects" : "TEST2",
-  "Dentropy Deamon Intro" : "TEST3",
-  "Dentropy's Favorite Apps" : "TEST4"
-}
-
-// Embedding Notes
-for(var i = 0; i < site_data.uuid_list.length; i++){
-  console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-  let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-  doc = await addInEmbeddedNotes(doc.toString())
-
-  // Changing WikiLinks to connect to UUID filename
-  console.log(`Performing replaceWikiLinks on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-  let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
-  for(var k = 0; k < wikilinks.length; k++){
-    wikilinks[k].link = site_data.filename_uuid[wikilinks[k].link] 
+  let test_obj = {
+    "Dentropy's Blog Posts and Videos" : "TEST1",
+    "Dentropy's Projects" : "TEST2",
+    "Dentropy Deamon Intro" : "TEST3",
+    "Dentropy's Favorite Apps" : "TEST4"
   }
-  let raw_links = []
-  for(var j = 0; j < wikilinks.length; j++){
-    raw_links.push(`[${wikilinks[j].text}](/${wikilinks[j].link})`)
-  }
-  let result = replaceWikiLinks(doc.toString(), raw_links)
-  await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
-};
 
-// Checking for images in markdown documents
-site_data.images = []
-for(var i = 0; i < site_data.uuid_list.length; i++){
-  console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-  let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-  let extracted_images = extractImagesFromMarkdown(doc)
-  if ( extracted_images.length > 0) {
-    site_data.images.push( { 
-      note_uuid : site_data.uuid_list[i],
-      image_links : extracted_images
-    } )
-  }
-  // Check if extracted_images are file system images or links
+  // Embedding Notes
+  for(var i = 0; i < site_data.uuid_list.length; i++){
+    console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    doc = await addInEmbeddedNotes(doc.toString())
 
-  // Move files over to site folder
-
-};
-
-
-
-// Generate site_date.site_hierarchy, note this is not technically required
-
-
-
-Object.keys(site_data.filepath_uuid).forEach(key => {
-  const value = site_data.filepath_uuid[key];
-  console.log(`site_hierarchy key:${key},  value:${value} added`);
-  let key_from_pkm_path = key.replace("/home/paul/Documents/", "");
-  let split_filepath = key_from_pkm_path.split('/')
-  createRecursiveObject(site_data.site_hierarchy, split_filepath, value);
-});
-
-
-
-await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
-console.log("Added site_data.json")
-await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
-await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
-console.log("Added index.md files")
-
-let note_filepaths = Object.keys(site_data.filepath_uuid)
-note_filepaths = note_filepaths.sort()
-
-
-let notes_with_metadata = []
-note_filepaths.forEach(note_path => {
-  notes_with_metadata.push({
-    note_path: note_path,
-    uuid:  site_data.filepath_uuid[note_path],
-    parsed: String(note_path).split('/'),
-    parsed_length: String(note_path).split('/').length
-  })  
-})
-notes_with_metadata.sort((a, b) => a.parsed_length - b.parsed_length);
-notes_with_metadata.reverse()
-
-
-
-let test_yaml = [{
-  "Section": [
-    "section/index", {
-      Page1: "page1-uuid"
-    }, {
-      Page2: "page2-uuid"
+    // Changing WikiLinks to connect to UUID filename
+    console.log(`Performing replaceWikiLinks on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
+    for(var k = 0; k < wikilinks.length; k++){
+      wikilinks[k].link = site_data.filename_uuid[wikilinks[k].link] 
     }
-  ]
-}]
-
-
-
-/// CHAT GPT Functions
-
-// Initialize the data structure
-let fileStructure = [];
-
-// Function to add a file path and its contents to the file structure
-function addFilePath(filePath, contents) {
-  let currentLevel = fileStructure;
-
-  // Split the file path into individual directory names
-  const directories = filePath.split('/');
-
-  // Remove the filename from the directories array
-  const fileName = directories.pop();
-
-  // Loop through each directory in the file path
-  for (const directory of directories) {
-    // Check if the directory already exists at the current level
-    const existingDirectory = currentLevel.find(item => item.hasOwnProperty(directory));
-
-    // If the directory doesn't exist, create it
-    if (!existingDirectory) {
-      const newDirectory = {};
-      newDirectory[directory] = [];
-      currentLevel.push(newDirectory);
-      currentLevel = newDirectory[directory];
-    } else {
-      // If the directory exists, move to the next level
-      currentLevel = existingDirectory[directory];
+    console.log(`wikilinks ${wikilinks}`)
+    let raw_links = []
+    for(var j = 0; j < wikilinks.length; j++){
+      raw_links.push(`[${wikilinks[j].text}](/${wikilinks[j].link})`)
     }
+    console.log(`raw_links: ${raw_links}`)
+    let result = replaceWikiLinks(doc.toString(), raw_links)
+    await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
+  };
+
+  // Checking for images in markdown documents
+  site_data.images = []
+  for(var i = 0; i < site_data.uuid_list.length; i++){
+    console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    
+    let extracted_images = extractImagesFromMarkdown(doc)
+    if ( extracted_images.length > 0) {
+      site_data.images.push( { 
+        note_uuid : site_data.uuid_list[i],
+        image_links : extracted_images
+      } )
+    }
+
+    
+    // Check if extracted_images are file system images or links
+
+    // Move files over to site folder
+
+    };
+
+
+
+  // Generate site_date.site_hierarchy, note this is not technically required
+
+  Object.keys(site_data.filepath_uuid).forEach(key => {
+    const value = site_data.filepath_uuid[key];
+    console.log(`site_hierarchy key:${key},  value:${value} added`);
+    let key_from_pkm_path = key.replace("/home/paul/Documents/", "");
+    let split_filepath = key_from_pkm_path.split('/')
+    createRecursiveObject(site_data.site_hierarchy, split_filepath, value);
+  });
+
+
+
+  await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
+  console.log("Added site_data.json")
+  console.log(site_data)
+  await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
+  await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
+  console.log("Added index.md files")
+
+  let note_filepaths = Object.keys(site_data.filepath_uuid)
+  note_filepaths = note_filepaths.sort()
+
+
+  let notes_with_metadata = []
+  note_filepaths.forEach(note_path => {
+    notes_with_metadata.push({
+      note_path: note_path,
+      uuid:  site_data.filepath_uuid[note_path],
+      parsed: String(note_path).split('/'),
+      parsed_length: String(note_path).split('/').length
+    })  
+  })
+  notes_with_metadata.sort((a, b) => a.parsed_length - b.parsed_length);
+  notes_with_metadata.reverse()
+
+
+
+  let test_yaml = [{
+    "Section": [
+      "section/index", {
+        Page1: "page1-uuid"
+      }, {
+        Page2: "page2-uuid"
+      }
+    ]
+  }]
+
+
+
+  /// CHAT GPT Functions
+
+  // Initialize the data structure
+  let fileStructure = [];
+
+  // Function to add a file path and its contents to the file structure
+  function addFilePath(filePath, contents) {
+    let currentLevel = fileStructure;
+
+    // Split the file path into individual directory names
+    const directories = filePath.split('/');
+
+    // Remove the filename from the directories array
+    const fileName = directories.pop();
+
+    // Loop through each directory in the file path
+    for (const directory of directories) {
+      // Check if the directory already exists at the current level
+      const existingDirectory = currentLevel.find(item => item.hasOwnProperty(directory));
+
+      // If the directory doesn't exist, create it
+      if (!existingDirectory) {
+        const newDirectory = {};
+        newDirectory[directory] = [];
+        currentLevel.push(newDirectory);
+        currentLevel = newDirectory[directory];
+      } else {
+        // If the directory exists, move to the next level
+        currentLevel = existingDirectory[directory];
+      }
+    }
+
+    // Add the file to the final level
+    const file = {};
+    file[fileName] = contents;
+    currentLevel.push(file);
   }
 
-  // Add the file to the final level
-  const file = {};
-  file[fileName] = contents;
-  currentLevel.push(file);
+  // Usage example
+  // addFilePath('one/two/three/hello.txt', 'qwerty');
+  // addFilePath('one/two/four/example.txt', '12345');
+  // addFilePath('one/five/another.txt', 'abcdef');
+  // console.log(JSON.stringify(fileStructure));
+
+  /// END CHAT GPT
+
+  notes_with_metadata.forEach(note => {
+    addFilePath(note.note_path, note.uuid);
+  })
+
+  const yamlData = yaml.stringify(fileStructure);
+  let mkdocs_yml = await fs.readFile('./mkdocs-bak.yml')
+  await fs.writeFile(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure)); // This is technically not used, but a nice to have
+  await fs.writeFile(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
+  console.log("Built mkdocs.yaml")
+  console.log("Built Markdown Completed Successfully")
+  process.exit(0);
 }
-
-// Usage example
-// addFilePath('one/two/three/hello.txt', 'qwerty');
-// addFilePath('one/two/four/example.txt', '12345');
-// addFilePath('one/five/another.txt', 'abcdef');
-// console.log(JSON.stringify(fileStructure));
-
-/// END CHAT GPT
-
-notes_with_metadata.forEach(note => {
-  addFilePath(note.note_path, note.uuid);
-})
-
-const yamlData = yaml.stringify(fileStructure);
-let mkdocs_yml = await fs.readFile('./mkdocs-bak.yml')
-await fs.writeFile(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure)); // This is technically not used, but a nice to have
-await fs.writeFile(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
-console.log("Built mkdocs.yaml")
-console.log("Built Markdown Completed Successfully")

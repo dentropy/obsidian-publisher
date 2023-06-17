@@ -1,4 +1,4 @@
-site_name: Dentropy's PKM
+site_name: Dentropy's Knowledge Base
 site_url: https://dentropy.github.io/
 docs_dir: markdown_files
 site_dir: docs
@@ -7,7 +7,19 @@ theme:
   features:
     - navigation.indexes
     - navigation.tabs.sticky
+    - navigation.footer
 plugins:
   - search:
       lang: en
+extra:
+  generator: true
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/PaulWMullins
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:dentropy@protonmail.com
+    - icon: fontawesome/brands/github
+      link: https://github.com/dentropy
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/paulmullins-779/
 nav:
