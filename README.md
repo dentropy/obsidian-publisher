@@ -63,15 +63,6 @@ Replace the `dentropy` in `site_url: https://dentropy.github.io` to your github 
 site_url: https://dentropy.github.io
 ```
 
-
-**Edit dentropys-obsidian-publisher/process_markdown.js**
-
-``` js
-const pattern = '/home/paul/Documents/Root/**/*.md';
-const offset_index = 3;
-const out_path = './dentropy.github.io'
-```
-
 Change `pattern` to the path where your Obsidian Vault is, remember to keep the `/**/*.md` at the end
 Change `offset_index` to what the sliced index is, in this case Root is the main folder
 Change `out_path` to `$YOUR_GITHUB_USERNAME.github.io`
@@ -139,3 +130,13 @@ bash container-build.sh
 bash container-run.sh
 sudo chown $USER:$USER ./pkm_out
 ```
+
+## Scripts
+
+* Get all files in group
+* Get all files shared
+* Display hierarchy tree color coded based on shared or not shared
+* Share everything within glob path besides these hard coded notes
+* Do we also want a private variable, just to make things super safe?
+  * If we can script directories to share, we need a counter measure
+* Then we need to dump all this shit into sqlite

@@ -11,8 +11,17 @@ import { glob } from 'glob';
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 import readline from 'readline';
-//import yaml from 'js-yaml'
 import { Command } from 'commander';
+
+// Import Custom Modules
+import { addInEmbeddedNotes } from './lib/addInEmbeddedNotes.js';
+import { createRecursiveObject } from './lib/createRecursiveObject.js';
+import { extractImagesFromMarkdown } from './lib/extractImagesFromMarkdown.js';
+import { extractWikiLinksFromMarkdown } from './lib/extractWikiLinksFromMarkdown.js';
+import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js'; // Not Used
+import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
+import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
+
 
 // Gotta initialize this first because it is called from inside the functions, no functional programming here bro
 let site_data = {
@@ -108,181 +117,6 @@ else {
   build()
 }
 
-
-// Helper Functions
-
-
-
-function replaceYamlFrontMatter(markdownContent, newFrontMatter) {
-  // Match YAML front matter using regular expression
-  const regex = /^---\n([\s\S]+?)\n---\n/;
-  
-  // Replace the YAML front matter with the new front matter
-  return markdownContent.replace(regex, `---\n${newFrontMatter}\n---\n`);
-}
-
-// Thank you #ChatGPT https://sharegpt.com/c/oPDZdLS
-function extractWikiLinksFromMarkdown(content) {
-  // Regular expression to match wiki links
-  const wikiLinkRegex = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
-
-  // Array to store extracted wiki links
-  const wikiLinks = [];
-
-  // Iterate over each match and extract the link and text
-  let match;
-  while ((match = wikiLinkRegex.exec(content))) {
-    const link = match[1];
-    const text = match[2] || link; // If no text is provided, use the link itself
-    wikiLinks.push({ link, text });
-  }
-
-  return wikiLinks;
-}
-
-function removeYamlFromMarkdown(markdown) {
-  const lines = markdown.trim().split('\n');
-
-  if (lines[0].trim() === '---') {
-    let index = lines.indexOf('---', 1);
-    if (index !== -1) {
-      lines.splice(0, index + 1);
-    }
-  }
-
-  const updatedMarkdown = lines.join('\n').trim();
-  return updatedMarkdown;
-}
-
-// Function to update wikilinks with markdown links, with help from #ChatGPT
-async function addInEmbeddedNotes(content) {
-  // Find Embeds
-  // Regular expression to match wiki links
-  let wikiLinkRegex = /\!\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
-  // Array to store extracted wiki links
-  let wikiEmbeds = [];
-  // Iterate over each match and extract the link and text
-  let match;
-  while ((match = wikiLinkRegex.exec(content))) {
-    console.log(`match ${match[0]}`)
-    console.log(`match ${match[1]}`)
-    console.log(`match ${match[2]}`)
-    let link = match[1];
-    let text = match[2] || link; // If no text is provided, use the link itself
-    let heading = ''
-    if ( text.includes('#') ){
-      text = match[1].split('#')[0];
-      link = text;
-      heading = match[1].split('#')[1];
-    }
-    wikiEmbeds.push({ link, text, heading });
-  }
-  let replacements = wikiEmbeds
-
-  
-  // Find note to embed
-  for(var k = 0; k < wikiEmbeds.length; k++){
-    wikiEmbeds[k].link = site_data.filename_uuid[wikiEmbeds[k].link] 
-  }
-  let raw_links = []
-  for(var j = 0; j < wikiEmbeds.length; j++){
-    console.log("wikiEmbeds")
-    console.log(wikiEmbeds)
-    let file_contents = "No File Found"
-    try {
-      // This is where we process the heading
-      // We need the Syntax Tree
-      // We need to search syntax tree for the heading
-      // Then we need to reassemble the markdown file from the syntax tree
-      file_contents = await fs.readFile(out_path + "/markdown_files/" + wikiEmbeds[j].link +".md")
-
-      if(wikiEmbeds.heading != ''){
-        let mk_tree = fromMarkdown(file_contents, {
-          extensions: [frontmatter(['yaml', 'toml']), syntax()],
-          mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
-        })
-        let sub_mk_doc = {
-          type: 'root',
-          children: []
-        }
-        for(var item_index = 0; item_index < mk_tree.children.length; item_index++){
-          if(mk_tree.children[item_index].type == 'heading'){
-            if (mk_tree.children[item_index].children[0].value.includes(wikiEmbeds[j].heading)){
-              sub_mk_doc.children.push(mk_tree.children[item_index])
-              while(mk_tree.children[item_index + 1].type != 'heading' && item_index < mk_tree.children.length){
-                sub_mk_doc.children.push(mk_tree.children[item_index + 1])
-                item_index += 1
-              }
-            }
-          }
-        }
-        file_contents = toMarkdown(sub_mk_doc)
-      }
-    
-    } catch (error) {
-      console.log("Could not find file error")
-      console.log(String(error))
-    }
-    raw_links.push(removeYamlFromMarkdown(String(file_contents)))
-  }
-
-
-  // Replace Embeds
-  wikiLinkRegex = /\!\[\[.*?\]\]/g;
-  const regex = new RegExp(wikiLinkRegex, 'g');
-  const matches = content.match(regex);
-  const count = matches ? matches.length : 0;
-  const singleWikiLinkRegex = /\!\[\[.*?\]\]/;
-  for(var i = 0; i < raw_links.length; i++){
-    content = content.replace(singleWikiLinkRegex, raw_links[i]);
-  }
-  console.log(count)
-  return content;
-}
-
-// Function to update wikilinks with markdown links, with help from #ChatGPT
-function replaceWikiLinks(content, replacements) {
-  const wikiLinkRegex = /\[\[.*?\]\]/g;
-  const regex = new RegExp(wikiLinkRegex, 'g');
-  const matches = content.match(regex);
-  const count = matches ? matches.length : 0;
-  const singleWikiLinkRegex = /\[\[.*?\]\]/;
-  for(var i = 0; i < replacements.length; i++){
-    content = content.replace(singleWikiLinkRegex, replacements[i]);
-  }
-  console.log(count)
-
-  return content;
-}
-
-function createRecursiveObject(obj, keys, uuid) {
-  if (keys.length === 0) {
-    obj.uuid = uuid
-    return obj; // Return the final object
-  }
-  const currentKey = keys[0];
-  if (!obj.hasOwnProperty(currentKey) || typeof obj[currentKey] !== 'object') {
-    obj[currentKey] = {}; // Create the property if it doesn't exist or is not an object
-  }
-
-  return createRecursiveObject(obj[currentKey], keys.slice(1), uuid);
-}
-
-// https://sharegpt.com/c/fsZTWHu
-function extractImagesFromMarkdown(markdownString) {
-  const imageUrls = [];
-  const imageRegex = /!\[.*?\]\((.*?)\)/g;
-  let match;
-
-  while ((match = imageRegex.exec(markdownString)) !== null) {
-    imageUrls.push(match[1]);
-  }
-
-  return imageUrls;
-}
-
-
-
 // Real stuff starts here
 
 async function build(){
@@ -376,7 +210,7 @@ async function build(){
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    doc = await addInEmbeddedNotes(doc.toString())
+    doc = await addInEmbeddedNotes(site_data, doc.toString())
 
     // Changing WikiLinks to connect to UUID filename
     console.log(`Performing replaceWikiLinks on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
@@ -431,7 +265,7 @@ async function build(){
 
   await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
   console.log("Added site_data.json")
-  console.log(site_data)
+  console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
   await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
   await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
   console.log("Added index.md files")
