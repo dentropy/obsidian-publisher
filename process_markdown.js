@@ -5,7 +5,7 @@ import readline from 'readline';
 import { Command } from 'commander';
 
 // File System Stuff
-import fs from 'node:fs/promises'
+import fs from 'fs'
 import { glob } from 'glob';
 
 // Markdown Stuff
@@ -28,16 +28,6 @@ import { extractWikiLinksFromMarkdown } from './lib/extractWikiLinksFromMarkdown
 import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js'; // Not Used
 import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
 import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
-
-
-// Gotta initialize this first because it is called from inside the functions, no functional programming here bro
-let site_data = {
-  uuid_list : [],
-  filename_uuid : {},
-  filepath_uuid : {},
-  yaml_uuid: {},
-  site_hierarchy : {}
-}
 
 
 const program = new Command();
@@ -128,11 +118,18 @@ else {
 // Real stuff starts here
 
 async function build(){
-  // const pattern = 'index.md';     // For Testing
-  // const out_path = "./out/docs"   // For Testing
+
+  let site_data = {
+    uuid_list : [],
+    filename_uuid : {},
+    filepath_uuid : {},
+    yaml_uuid: {},
+    site_hierarchy : {}
+  }
+
   // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
-  await fs.mkdir(out_path, { recursive: true });
-  await fs.mkdir(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
+  await fs.mkdirSync(out_path, { recursive: true });
+  await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
 
   // Get all markdown files
   const filepaths = glob.sync(pattern);
@@ -143,7 +140,7 @@ async function build(){
   // Check the groups and permissions on the files
   for (var i = 0; i < filepaths.length; i++) {
     // Read markdown file and turn it into syntax tree
-    let doc = await fs.readFile(filepaths[i])
+    let doc = await fs.readFileSync(filepaths[i])
     let tree = fromMarkdown(doc, {
       extensions: [frontmatter(['yaml', 'toml']), syntax()],
       mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
@@ -161,13 +158,13 @@ async function build(){
           parsed_yaml.uuid = uuidv4();
           parsed_yaml.share = false
           let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-          await fs.writeFile(filepaths[i], new_md_file)
+          await fs.writeFileSync(filepaths[i], new_md_file)
         }
       } else {
         parsed_yaml.uuid = uuidv4();
         parsed_yaml.share = false
         let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-        await fs.writeFile(filepaths[i], new_md_file)
+        await fs.writeFileSync(filepaths[i], new_md_file)
       }
     }
 
@@ -181,7 +178,7 @@ async function build(){
           parsed_yaml.uuid = uuidv4();
           let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
           let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-          await fs.writeFile(filepaths[i], new_md_file)
+          await fs.writeFileSync(filepaths[i], new_md_file)
         }
         // We get the note_title here because if share:false we do not need to do this processing
         // We have if statement because title can be hard coded in the original yaml
@@ -194,7 +191,7 @@ async function build(){
         }
         let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
         let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-        await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
+        await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
         site_data.uuid_list.push(parsed_yaml.uuid)
         site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
         site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
@@ -209,7 +206,7 @@ async function build(){
   // Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     doc = await addInEmbeddedNotes(site_data, doc.toString())
 
     // Changing WikiLinks to connect to UUID filename
@@ -225,14 +222,14 @@ async function build(){
     }
     console.log(`raw_links: ${raw_links}`)
     let result = replaceWikiLinks(doc.toString(), raw_links)
-    await fs.writeFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
+    await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
   };
 
   // Checking for images in markdown documents
   site_data.images = []
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
+    let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     
     let extracted_images = extractImagesFromMarkdown(doc)
     if ( extracted_images.length > 0) {
@@ -262,11 +259,11 @@ async function build(){
 
 
 
-  await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
+  await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
   console.log("Added site_data.json")
   console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
-  await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
-  await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
+  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
+  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
   console.log("Added index.md files")
 
   let note_filepaths = Object.keys(site_data.filepath_uuid)
@@ -284,19 +281,6 @@ async function build(){
   })
   notes_with_metadata.sort((a, b) => a.parsed_length - b.parsed_length);
   notes_with_metadata.reverse()
-
-
-
-  let test_yaml = [{
-    "Section": [
-      "section/index", {
-        Page1: "page1-uuid"
-      }, {
-        Page2: "page2-uuid"
-      }
-    ]
-  }]
-
 
 
   /// CHAT GPT Functions
@@ -335,17 +319,18 @@ async function build(){
     file[fileName] = contents;
     currentLevel.push(file);
   }
-
   /// END CHAT GPT
+
 
   notes_with_metadata.forEach(note => {
     addFilePath(note.note_path, note.uuid);
   })
 
+
   const yamlData = yaml.stringify(fileStructure);
-  let mkdocs_yml = await fs.readFile('./mkdocs-bak.yml')
-  await fs.writeFile(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
-  await fs.writeFile(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
+  let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml')
+  await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
+  await fs.writeFileSync(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
   console.log("Built mkdocs.yaml")
   console.log("Built Markdown Completed Successfully")
   process.exit(0);
