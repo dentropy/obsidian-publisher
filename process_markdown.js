@@ -202,17 +202,6 @@ async function build(){
 
 
   // Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
-
-
-
-  let test_obj = {
-    "Dentropy's Blog Posts and Videos" : "TEST1",
-    "Dentropy's Projects" : "TEST2",
-    "Dentropy Deamon Intro" : "TEST3",
-    "Dentropy's Favorite Apps" : "TEST4"
-  }
-
-  // Embedding Notes
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let doc = await fs.readFile(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
