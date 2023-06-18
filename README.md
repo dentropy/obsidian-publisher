@@ -145,9 +145,22 @@ sudo chown $USER:$USER ./pkm_out
 
 node ./scripts/list_all_markdown_files.js -i /home/paul/Documents/Root -o out.json
 
-node ./scripts/saveBasicSiteData.js \
+node ./scripts/save_site_data.js \
   -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault \
   -o out.json -oi 5 
 
+node ./scripts/update_and_insert_yaml_tags.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault \
+  -t groups \
+  -v test
+
+git checkout test_vault
+
+node ./scripts/update_and_insert_yaml_tags.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
+  -t groups \
+  -v blog
+
+git checkout test_vault
 
 ```
