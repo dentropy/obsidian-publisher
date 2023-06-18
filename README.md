@@ -140,3 +140,14 @@ sudo chown $USER:$USER ./pkm_out
 * Do we also want a private variable, just to make things super safe?
   * If we can script directories to share, we need a counter measure
 * Then we need to dump all this shit into sqlite
+
+``` bash
+
+node ./scripts/list_all_markdown_files.js -i /home/paul/Documents/Root -o out.json
+
+node ./scripts/saveBasicSiteData.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault \
+  -o out.json -oi 5 
+
+
+```

@@ -124,7 +124,8 @@ async function build(){
     filename_uuid : {},
     filepath_uuid : {},
     yaml_uuid: {},
-    site_hierarchy : {}
+    site_hierarchy : {},
+    images : []
   }
 
   // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
@@ -132,7 +133,7 @@ async function build(){
   await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
 
   // Get all markdown files
-  const filepaths = glob.sync(pattern);
+  const filepaths = await glob.sync(pattern);
 
 
   // Loop through all markdown files
@@ -196,6 +197,15 @@ async function build(){
         site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
         site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
         site_data.yaml_uuid[parsed_yaml.uuid] = parsed_yaml
+        let extracted_images = extractImagesFromMarkdown(doc)
+        if ( extracted_images.length > 0) {
+          site_data.images.push( { 
+            note_uuid : parsed_yaml.uuid,
+            image_links : extracted_images
+          } )
+        }
+        // #TODO Check if extracted_images are file system images or links
+        // #TODO Move files over to site folder
       }
     }
     console.log(`Parsed ${filepaths[i]}`)
@@ -224,29 +234,6 @@ async function build(){
     let result = replaceWikiLinks(doc.toString(), raw_links)
     await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
   };
-
-  // Checking for images in markdown documents
-  site_data.images = []
-  for(var i = 0; i < site_data.uuid_list.length; i++){
-    console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    
-    let extracted_images = extractImagesFromMarkdown(doc)
-    if ( extracted_images.length > 0) {
-      site_data.images.push( { 
-        note_uuid : site_data.uuid_list[i],
-        image_links : extracted_images
-      } )
-    }
-
-    
-    // Check if extracted_images are file system images or links
-
-    // Move files over to site folder
-
-    };
-
-
 
   // Generate site_date.site_hierarchy, note this is not technically required
   Object.keys(site_data.filepath_uuid).forEach(key => {

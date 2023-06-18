@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+
 import util from 'util';
 
 // File System Stuff
@@ -17,7 +17,7 @@ import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontma
 import yaml from 'yaml';
 import { v4 as uuidv4 } from 'uuid';
 
-
+import { Command } from 'commander';
 const program = new Command();
 program
   .name('List All Markdown Files in Specified Path')

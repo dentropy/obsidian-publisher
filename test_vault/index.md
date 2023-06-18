@@ -28,3 +28,7 @@ Now we need to to add some internal links,
 
 * [[Embedded Notes Test]]
 * [[Sub Embedded Notes Test]]
+
+## Test Image
+
+![Grumpy Cat](https://i.chzbgr.com/full/9176023808/h68145F63/meme-cat-i-had-fun-once-it-was-awful-qutmamaco)

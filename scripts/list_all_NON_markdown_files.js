@@ -1,8 +1,8 @@
-import { Command } from 'commander';
 import { glob } from 'glob';
 import fs from 'fs';
 import util from 'util'
 
+import { Command } from 'commander';
 const program = new Command();
 program
   .name('List All Markdown Files in Specified Path')
