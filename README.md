@@ -166,6 +166,21 @@ node ./scripts/update_and_insert_yaml_tags.js \
   -t groups \
   -v blog
 
+node ./scripts/append_value_in_path.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
+  -t groups \
+  -v blog
+
+node ./scripts/append_value_in_path.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
+  -t groups \
+  -v published
+
+node ./scripts/remove_value_from_key.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
+  -t groups \
+  -v published
+
 git checkout test_vault
 ```
 

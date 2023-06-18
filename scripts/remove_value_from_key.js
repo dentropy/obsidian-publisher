@@ -7,6 +7,7 @@ import { glob } from 'glob';
 
 // Import Custom Modules
 import { extractYamlFromMarkdown } from '../lib/extractYamlFromMarkdown.js';
+import { removeYamlFromMarkdown } from '../lib/removeYamlFromMarkdown.js';
 
 import { Command } from 'commander';
 const program = new Command();
@@ -47,14 +48,10 @@ async function main(pattern, key, value){
     }
     if(Object.keys(parsed_yaml).includes(key)){
       if(Array.isArray(parsed_yaml[key])){
-        parsed_yaml[key].push(value)
-      }
-      else {
-        old_value = parsed_yaml[key]
-        parsed_yaml[key] = [value, old_value]
+        parsed_yaml[key] = parsed_yaml[key].filter(item => item !== value);
       }
     }
-    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + removeYamlFromMarkdown(doc.toString())
     await fs.writeFileSync(filepaths[i], new_md_file)
   }
 }
