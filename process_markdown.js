@@ -25,14 +25,15 @@ import { addInEmbeddedNotes } from './lib/addInEmbeddedNotes.js';
 import { createRecursiveObject } from './lib/createRecursiveObject.js';
 import { extractImagesFromMarkdown } from './lib/extractImagesFromMarkdown.js';
 import { extractWikiLinksFromMarkdown } from './lib/extractWikiLinksFromMarkdown.js';
-import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js'; // Not Used
 import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
 import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
 import { generateBasicSiteData } from './lib/generateBasicSiteData.js';
+import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js';
 
 // Verification Functions
 import { shared_verification_function } from './verification_functions/shared_verification_function.js';
 import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
+import { extractYamlFromMarkdown } from './lib/extractYamlFromMarkdown.js';
 
 const program = new Command();
 program
@@ -57,7 +58,6 @@ else {
   if (pattern.charAt(pattern.length - 1) != '/'){
     pattern += '/'
   }
-  pattern += '**/*.md'
 }
 
 let out_path = ''
@@ -143,7 +143,6 @@ async function build(){
     let parsed_yaml = {}
     parsed_yaml.uuid = uuidv4();
     parsed_yaml.share = false
-    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
     await fs.writeFileSync(site_data.files_with_no_uuid[i], new_md_file)
   }
   delete site_data.files_with_no_uuid
@@ -155,9 +154,14 @@ async function build(){
   for(var i = 0; i < filepaths_to_copy.length; i++){
     let tmp_from_path = site_data.root_path + filepaths_to_copy[i]
     let doc = await fs.readFileSync(tmp_from_path)
+    let parsed_yaml =  extractYamlFromMarkdown(doc.toString())
     let tmp_uuid = site_data.filepath_uuid[filepaths_to_copy[i]]
+    if(!Object.keys(parsed_yaml).includes('title')){
+      parsed_yaml["title"] = filepaths_to_copy[i].split('/').pop().split('.')[0]
+    }
+    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  removeYamlFromMarkdown( doc.toString() )
     let tmp_to_path = `${out_path}/${mkfiles_directory_name}/${tmp_uuid}.md`
-    await fs.writeFileSync(tmp_to_path, doc)
+    await fs.writeFileSync(tmp_to_path, new_md_file)
     console.log(`Saved ${tmp_uuid} from ${filepaths_to_copy[i]}`)
   }
   delete site_data.root_path
@@ -193,7 +197,7 @@ async function build(){
   let notes_with_metadata = []
   note_filepaths.forEach(note_path => {
     notes_with_metadata.push({
-      note_path: note_path,
+      note_path: note_path.slice(0, -3),
       uuid:  site_data.filepath_uuid[note_path],
       parsed: String(note_path).split('/'),
       parsed_length: String(note_path).split('/').length
@@ -245,6 +249,8 @@ async function build(){
   console.log("DONE Building YAML Directory")
 
   console.log("Saving and moving the last couple files around")
+  console.log("INDEX")
+  console.log(site_data.filename_uuid["index"])
   await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
   await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
   console.log("Added index.md files")
