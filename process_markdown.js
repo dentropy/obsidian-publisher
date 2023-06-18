@@ -269,7 +269,7 @@ async function build(){
 
 
 
-  await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data));
+  await fs.writeFile(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
   console.log("Added site_data.json")
   console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
   await fs.copyFile(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
@@ -348,7 +348,7 @@ async function build(){
   // addFilePath('one/two/three/hello.txt', 'qwerty');
   // addFilePath('one/two/four/example.txt', '12345');
   // addFilePath('one/five/another.txt', 'abcdef');
-  // console.log(JSON.stringify(fileStructure));
+  // console.log(JSON.stringify(fileStructure, null, 2));
 
   /// END CHAT GPT
 
@@ -358,7 +358,7 @@ async function build(){
 
   const yamlData = yaml.stringify(fileStructure);
   let mkdocs_yml = await fs.readFile('./mkdocs-bak.yml')
-  await fs.writeFile(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure)); // This is technically not used, but a nice to have
+  await fs.writeFile(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
   await fs.writeFile(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
   console.log("Built mkdocs.yaml")
   console.log("Built Markdown Completed Successfully")
