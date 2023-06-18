@@ -167,5 +167,16 @@ node ./scripts/update_and_insert_yaml_tags.js \
   -v blog
 
 git checkout test_vault
+```
+
+## Helper Bash
+
+``` bash
+
+git add index.md markdown_files mkdocs* site_data*
+git commit -m "Updated Site"
+git add .
+git commit -m "Rebuilt site"
+git push origin main
 
 ```
