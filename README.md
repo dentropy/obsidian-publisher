@@ -13,9 +13,14 @@ This project build a static website using mkdocs from your obsidian vault. Pleas
 ## Install
 
 ``` bash
-
+python3 -m venv env
+source env/bin/activate
 pip3 install mkdocs
 pip3 install mkdocs-material
+# pip3 install git+https://github.com/danodic-dev/mkdocs-backlinks.git
+# pip3 install mkdocs-tooltipster-links-plugin
+# pip3 install mkdocs-backlinks
+# pip3 install mkdocs-preview-links-plugin
 
 git clone https://github.com/dentropy/dentropys-obsidian-publisher.git
 cd dentropys-obsidian-publisher
