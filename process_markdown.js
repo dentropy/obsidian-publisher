@@ -35,6 +35,7 @@ let site_data = {
   uuid_list : [],
   filename_uuid : {},
   filepath_uuid : {},
+  yaml_uuid: {},
   site_hierarchy : {}
 }
 
@@ -137,6 +138,9 @@ async function build(){
   const filepaths = glob.sync(pattern);
 
 
+  // Loop through all markdown files
+  // If no UUID assigned to file add front yaml to original file
+  // Check the groups and permissions on the files
   for (var i = 0; i < filepaths.length; i++) {
     // Read markdown file and turn it into syntax tree
     let doc = await fs.readFile(filepaths[i])
@@ -194,6 +198,7 @@ async function build(){
         site_data.uuid_list.push(parsed_yaml.uuid)
         site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
         site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
+        site_data.yaml_uuid[parsed_yaml.uuid] = parsed_yaml
       }
     }
     console.log(`Parsed ${filepaths[i]}`)
@@ -247,7 +252,6 @@ async function build(){
 
 
   // Generate site_date.site_hierarchy, note this is not technically required
-
   Object.keys(site_data.filepath_uuid).forEach(key => {
     const value = site_data.filepath_uuid[key];
     console.log(`site_hierarchy key:${key},  value:${value} added`);
@@ -299,9 +303,8 @@ async function build(){
 
   // Initialize the data structure
   let fileStructure = [];
-
   // Function to add a file path and its contents to the file structure
-  function addFilePath(filePath, contents) {
+  function addFilePath(filePath, contents ) {
     let currentLevel = fileStructure;
 
     // Split the file path into individual directory names
@@ -332,12 +335,6 @@ async function build(){
     file[fileName] = contents;
     currentLevel.push(file);
   }
-
-  // Usage example
-  // addFilePath('one/two/three/hello.txt', 'qwerty');
-  // addFilePath('one/two/four/example.txt', '12345');
-  // addFilePath('one/five/another.txt', 'abcdef');
-  // console.log(JSON.stringify(fileStructure, null, 2));
 
   /// END CHAT GPT
 
