@@ -29,7 +29,10 @@ import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js'; // Not
 import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
 import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
 import { generateBasicSiteData } from './lib/generateBasicSiteData.js';
+
+// Verification Functions
 import { shared_verification_function } from './verification_functions/shared_verification_function.js';
+import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
 
 const program = new Command();
 program
@@ -124,11 +127,20 @@ async function build(){
   await fs.mkdirSync(out_path, { recursive: true });
   await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
 
-  let site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
+  let site_data = {}
+  if (build_full_site == true){
+    site_data = await generateBasicSiteData(pattern, all_files_verification_function, offset_index)
+  } else {
+    site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
+  }
+  await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
+  console.log("Added site_data.json")
+  console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
 
   console.log("STARTING adding front YAML to original files")
   for(var i = 0; i < site_data.files_with_no_uuid.length; i++){
     let doc = await fs.readFileSync(site_data.files_with_no_uuid[i])
+    let parsed_yaml = {}
     parsed_yaml.uuid = uuidv4();
     parsed_yaml.share = false
     let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
@@ -136,6 +148,7 @@ async function build(){
   }
   delete site_data.files_with_no_uuid
   console.log("DONE adding front YAML to original files")
+
 
   console.log("STARTING copying titled files to UUID's")
   let filepaths_to_copy = Object.keys(site_data.filepath_uuid)
@@ -151,7 +164,7 @@ async function build(){
   console.log("DONE copying titled files to UUID's")
 
 
-  // Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
+  console.log("STARTING Fixing wikilinks and embedding notes")
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
@@ -172,24 +185,7 @@ async function build(){
     let result = replaceWikiLinks(doc.toString(), raw_links)
     await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`, result)
   };
-
-  // Generate site_date.site_hierarchy, note this is not technically required
-  Object.keys(site_data.filepath_uuid).forEach(key => {
-    const value = site_data.filepath_uuid[key];
-    console.log(`site_hierarchy key:${key},  value:${value} added`);
-    let key_from_pkm_path = key.replace("/home/paul/Documents/", "");
-    let split_filepath = key_from_pkm_path.split('/')
-    createRecursiveObject(site_data.site_hierarchy, split_filepath, value);
-  });
-
-
-
-  await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
-  console.log("Added site_data.json")
-  console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
-  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
-  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
-  console.log("Added index.md files")
+  console.log("DONE Fixing wikilinks and embedding notes")
 
   console.log("STARTING Building YAML Directory")
   let note_filepaths = Object.keys(site_data.filepath_uuid)
@@ -248,7 +244,10 @@ async function build(){
   })
   console.log("DONE Building YAML Directory")
 
-
+  console.log("Saving and moving the last couple files around")
+  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
+  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
+  console.log("Added index.md files")
   const yamlData = yaml.stringify(fileStructure);
   let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml')
   await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
