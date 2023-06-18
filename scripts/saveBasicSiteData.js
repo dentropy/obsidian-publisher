@@ -1,7 +1,8 @@
 import { generateBasicSiteData } from '../lib/generateBasicSiteData.js';
-import { checkTwoListsMatchingItems } from '../lib/checkTwoListsMatchingItems.js';
-
 import util from 'util'
+
+// Verification Functions
+import { shared_verification_function } from '../verification_functions/shared_verification_function.js';
 
 import { Command } from 'commander';
 const program = new Command();
@@ -43,37 +44,9 @@ if (  (Object.keys(options).includes("offsetindex"))  ){
 
 
 async function main(pattern, offset_index){
-
-  let shared_verification_function = function(parsed_yaml){
-    if( Object.keys(parsed_yaml).includes("share") ){
-      if (parsed_yaml["share"] == true ){
-        return true
-      }
-    }
-    return false
-  }
-
-  let groups_verification_function = function(parsed_yaml, group_name_list){
-    if( Object.keys(parsed_yaml).includes("groups") ){
-      // Check type is lists
-      if (typeof(parsed_yaml.groups) == typeof( [] ) ) {
-        if ( checkTwoListsMatchingItems(parsed_yaml.groups, group_name_list) ){
-          return true
-        }
-      }
-    }
-    return false
-  }
-
-  let all_files_verification_function = function(parsed_yaml){
-    return true
-  }
-
   let site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
   console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
   console.log("Successfully ran saveBasicSiteData")
-
-
 }
 
 main(pattern, offset_index)

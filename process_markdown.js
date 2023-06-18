@@ -28,7 +28,8 @@ import { extractWikiLinksFromMarkdown } from './lib/extractWikiLinksFromMarkdown
 import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js'; // Not Used
 import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
 import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
-
+import { generateBasicSiteData } from './lib/generateBasicSiteData.js';
+import { shared_verification_function } from './verification_functions/shared_verification_function.js';
 
 const program = new Command();
 program
@@ -119,14 +120,14 @@ else {
 
 async function build(){
 
-  let site_data = {
-    uuid_list : [],
-    filename_uuid : {},
-    filepath_uuid : {},
-    yaml_uuid: {},
-    site_hierarchy : {},
-    images : []
-  }
+  // let site_data = {
+  //   uuid_list : [],
+  //   filename_uuid : {},
+  //   filepath_uuid : {},
+  //   yaml_uuid: {},
+  //   site_hierarchy : {},
+  //   images : []
+  // }
 
   // Thank you #ChatGPT https://sharegpt.com/c/oOmLLUc
   await fs.mkdirSync(out_path, { recursive: true });
@@ -136,81 +137,107 @@ async function build(){
   const filepaths = await glob.sync(pattern);
 
 
-  // Loop through all markdown files
-  // If no UUID assigned to file add front yaml to original file
-  // Check the groups and permissions on the files
-  for (var i = 0; i < filepaths.length; i++) {
-    // Read markdown file and turn it into syntax tree
-    let doc = await fs.readFileSync(filepaths[i])
-    let tree = fromMarkdown(doc, {
-      extensions: [frontmatter(['yaml', 'toml']), syntax()],
-      mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
-    })
+  // // Loop through all markdown files
+  // // If no UUID assigned to file add front yaml to original file
+  // // Check the groups and permissions on the files
+  // for (var i = 0; i < filepaths.length; i++) {
+  //   // Read markdown file and turn it into syntax tree
+  //   let doc = await fs.readFileSync(filepaths[i])
+  //   let tree = fromMarkdown(doc, {
+  //     extensions: [frontmatter(['yaml', 'toml']), syntax()],
+  //     mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
+  //   })
 
-    // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
-    // #TODO This should be a specific function to be used in scripts
-    let parsed_yaml = {}
-    if (Object.keys(tree).includes("children")) {
-      if (tree["children"].length >= 1) {
-        // This if else statement edits the original markdown note in the Obsidian Vault
-        if (tree["children"][0].type == "yaml") {
-          parsed_yaml = yaml.parse(tree["children"][0].value)
-        } else {
-          parsed_yaml.uuid = uuidv4();
-          parsed_yaml.share = false
-          let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-          await fs.writeFileSync(filepaths[i], new_md_file)
-        }
-      } else {
-        parsed_yaml.uuid = uuidv4();
-        parsed_yaml.share = false
-        let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
-        await fs.writeFileSync(filepaths[i], new_md_file)
-      }
-    }
+  //   // Extract Yaml from markdown file, if not add UUID, save shared notes to out_path
+  //   // #TODO This should be a specific function to be used in scripts
+  //   let parsed_yaml = {}
+  //   if (Object.keys(tree).includes("children")) {
+  //     if (tree["children"].length >= 1) {
+  //       // This if else statement edits the original markdown note in the Obsidian Vault
+  //       if (tree["children"][0].type == "yaml") {
+  //         parsed_yaml = yaml.parse(tree["children"][0].value)
+  //       } else {
+  //         parsed_yaml.uuid = uuidv4();
+  //         parsed_yaml.share = false
+  //         let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+  //         await fs.writeFileSync(filepaths[i], new_md_file)
+  //       }
+  //     } else {
+  //       parsed_yaml.uuid = uuidv4();
+  //       parsed_yaml.share = false
+  //       let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+  //       await fs.writeFileSync(filepaths[i], new_md_file)
+  //     }
+  //   }
 
-    // Save the processed markdown into the mkdocs folder with filename as uuid of note
-    if (Object.keys(parsed_yaml).includes("share") || build_full_site == true) {
-      // #TODO will the line below stop memes from receiving UUID's if they are not shared when building site?
-      if (parsed_yaml["share"] == true || build_full_site == true) {
-        // If there is already a UUID in the markdown file YAML
-        if (!Object.keys(parsed_yaml).includes("uuid")) {
-          // If there is not a UUID in the original markdown file add one
-          parsed_yaml.uuid = uuidv4();
-          let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
-          let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-          await fs.writeFileSync(filepaths[i], new_md_file)
-        }
-        // We get the note_title here because if share:false we do not need to do this processing
-        // We have if statement because title can be hard coded in the original yaml
-        if (!Object.keys(parsed_yaml).includes("title")) {
-          // If title is not in the file add it
-          let note_title = filepaths[i].split('/')
-          note_title = note_title[note_title.length - 1]
-          note_title = note_title.split('.')[0]
-          parsed_yaml.title = note_title
-        }
-        let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
-        let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
-        await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
-        site_data.uuid_list.push(parsed_yaml.uuid)
-        site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
-        site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
-        site_data.yaml_uuid[parsed_yaml.uuid] = parsed_yaml
-        let extracted_images = extractImagesFromMarkdown(doc)
-        if ( extracted_images.length > 0) {
-          site_data.images.push( { 
-            note_uuid : parsed_yaml.uuid,
-            image_links : extracted_images
-          } )
-        }
-        // #TODO Check if extracted_images are file system images or links
-        // #TODO Move files over to site folder
-      }
-    }
-    console.log(`Parsed ${filepaths[i]}`)
+  //   // Save the processed markdown into the mkdocs folder with filename as uuid of note
+  //   if (Object.keys(parsed_yaml).includes("share") || build_full_site == true) {
+  //     // #TODO will the line below stop memes from receiving UUID's if they are not shared when building site?
+  //     if (parsed_yaml["share"] == true || build_full_site == true) {
+  //       // If there is already a UUID in the markdown file YAML
+  //       if (!Object.keys(parsed_yaml).includes("uuid")) {
+  //         // If there is not a UUID in the original markdown file add one
+  //         parsed_yaml.uuid = uuidv4();
+  //         let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
+  //         let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+  //         await fs.writeFileSync(filepaths[i], new_md_file)
+  //       }
+  //       // We get the note_title here because if share:false we do not need to do this processing
+  //       // We have if statement because title can be hard coded in the original yaml
+  //       if (!Object.keys(parsed_yaml).includes("title")) {
+  //         // If title is not in the file add it
+  //         let note_title = filepaths[i].split('/')
+  //         note_title = note_title[note_title.length - 1]
+  //         note_title = note_title.split('.')[0]
+  //         parsed_yaml.title = note_title
+  //       }
+  //       let yaml_string = yaml.stringify(parsed_yaml).slice(0, -1)
+  //       let new_md_file = replaceYamlFrontMatter(doc.toString(), yaml_string)
+  //       await fs.writeFileSync(`${out_path}/${mkfiles_directory_name}/${parsed_yaml.uuid}.md`, new_md_file)
+  //       site_data.uuid_list.push(parsed_yaml.uuid)
+  //       site_data.filepath_uuid[filepaths[i].split('/').slice(offset_index).join('/')] = parsed_yaml.uuid
+  //       site_data.filename_uuid[filepaths[i].split('/').pop().split('.')[0]] = parsed_yaml.uuid
+  //       site_data.yaml_uuid[parsed_yaml.uuid] = parsed_yaml
+  //       let extracted_images = extractImagesFromMarkdown(doc)
+  //       if ( extracted_images.length > 0) {
+  //         site_data.images.push( { 
+  //           note_uuid : parsed_yaml.uuid,
+  //           image_links : extracted_images
+  //         } )
+  //       }
+  //       // #TODO Check if extracted_images are file system images or links
+  //       // #TODO Move files over to site folder
+  //     }
+  //   }
+  //   console.log(`Parsed ${filepaths[i]}`)
+  // }
+
+
+  let site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
+
+  console.log("STARTING adding front YAML to original files")
+  for(var i = 0; i < site_data.files_with_no_uuid.length; i++){
+    let doc = await fs.readFileSync(site_data.files_with_no_uuid[i])
+    parsed_yaml.uuid = uuidv4();
+    parsed_yaml.share = false
+    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + doc.toString()
+    await fs.writeFileSync(site_data.files_with_no_uuid[i], new_md_file)
   }
+  delete site_data.files_with_no_uuid
+  console.log("DONE adding front YAML to original files")
 
+  console.log("STARTING copying titled files to UUID's")
+  let filepaths_to_copy = Object.keys(site_data.filepath_uuid)
+  for(var i = 0; i < filepaths_to_copy.length; i++){
+    let tmp_from_path = site_data.root_path + filepaths_to_copy[i]
+    let doc = await fs.readFileSync(tmp_from_path)
+    let tmp_uuid = site_data.filepath_uuid[filepaths_to_copy[i]]
+    let tmp_to_path = `${out_path}/${mkfiles_directory_name}/${tmp_uuid}.md`
+    await fs.writeFileSync(tmp_to_path, doc)
+    console.log(`Saved ${tmp_uuid} from ${filepaths_to_copy[i]}`)
+  }
+  delete site_data.root_path
+  console.log("DONE copying titled files to UUID's")
 
 
   // Add in embedded notes and replace wikilinks with markdown links to UUID markdown file
@@ -253,10 +280,9 @@ async function build(){
   await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
   console.log("Added index.md files")
 
+  console.log("STARTING Building YAML Directory")
   let note_filepaths = Object.keys(site_data.filepath_uuid)
   note_filepaths = note_filepaths.sort()
-
-
   let notes_with_metadata = []
   note_filepaths.forEach(note_path => {
     notes_with_metadata.push({
@@ -268,8 +294,6 @@ async function build(){
   })
   notes_with_metadata.sort((a, b) => a.parsed_length - b.parsed_length);
   notes_with_metadata.reverse()
-
-
   /// CHAT GPT Functions
 
   // Initialize the data structure
@@ -308,10 +332,10 @@ async function build(){
   }
   /// END CHAT GPT
 
-
   notes_with_metadata.forEach(note => {
     addFilePath(note.note_path, note.uuid);
   })
+  console.log("DONE Building YAML Directory")
 
 
   const yamlData = yaml.stringify(fileStructure);
