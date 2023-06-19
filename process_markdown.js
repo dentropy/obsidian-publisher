@@ -6,15 +6,15 @@ import { Command } from 'commander';
 
 // File System Stuff
 import fs from 'fs'
-import { glob } from 'glob';
+// import { glob } from 'glob';
 
 // Markdown Stuff
-import {fromMarkdown} from 'mdast-util-from-markdown'
-import {toMarkdown} from 'mdast-util-to-markdown'
-import { syntax } from 'micromark-extension-wiki-link'
-import * as wikiLink from 'mdast-util-wiki-link'
-import {frontmatter} from 'micromark-extension-frontmatter'
-import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontmatter'
+// import {fromMarkdown} from 'mdast-util-from-markdown'
+// import {toMarkdown} from 'mdast-util-to-markdown'
+// import { syntax } from 'micromark-extension-wiki-link'
+// import * as wikiLink from 'mdast-util-wiki-link'
+// import {frontmatter} from 'micromark-extension-frontmatter'
+// import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontmatter'
 
 // For Markdown Processing
 import yaml from 'yaml';
@@ -22,18 +22,19 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Import Custom Modules
 import { addInEmbeddedNotes } from './lib/addInEmbeddedNotes.js';
-import { createRecursiveObject } from './lib/createRecursiveObject.js';
-import { extractImagesFromMarkdown } from './lib/extractImagesFromMarkdown.js';
 import { extractWikiLinksFromMarkdown } from './lib/extractWikiLinksFromMarkdown.js';
 import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
-import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
 import { generateBasicSiteData } from './lib/generateBasicSiteData.js';
 import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js';
+import { extractYamlFromMarkdown } from './lib/extractYamlFromMarkdown.js';
+// import { createRecursiveObject } from './lib/createRecursiveObject.js';
+// import { extractImagesFromMarkdown } from './lib/extractImagesFromMarkdown.js';
+// import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
 
 // Verification Functions
 import { shared_verification_function } from './verification_functions/shared_verification_function.js';
 import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
-import { extractYamlFromMarkdown } from './lib/extractYamlFromMarkdown.js';
+import { groups_verification_function } from './verification_functions/groups_verification_function.js';
 
 const program = new Command();
 program
@@ -44,6 +45,7 @@ program
   .option('-oi, --offsetindex <int>')
   .option('-mkdn, --mkfilesfoldername <string>')
   .option('-ev, --entire_vault')
+  .option('-g, --groupstopublish <string>')
 program.parse(process.argv)
 const options = program.opts()
 
@@ -94,6 +96,11 @@ function askForConfirmation(question) {
   });
 }
 
+let groups_to_publish = []
+if (  (Object.keys(options).includes("groupstopublish"))  ){
+  groups_to_publish = options.groupstopublish.split(' ')
+}
+
 console.log(`pattern: ${pattern}`)
 console.log(`out_path: ${out_path}`)
 console.log(`offset_index: ${offset_index}`)
@@ -130,8 +137,15 @@ async function build(){
   let site_data = {}
   if (build_full_site == true){
     site_data = await generateBasicSiteData(pattern, all_files_verification_function, offset_index)
-  } else {
-    site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
+  } 
+  else {
+    if (groups_to_publish.length != 0){
+      site_data = await generateBasicSiteData(pattern, groups_verification_function, offset_index)
+    }
+    else {
+      console.log("SHOULD WORK")
+      site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
+    }
   }
   await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
   console.log("Added site_data.json")

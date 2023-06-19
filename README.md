@@ -181,6 +181,11 @@ node ./scripts/remove_value_from_key.js \
   -t groups \
   -v published
 
+node ./scripts/remove_value_from_key.js \
+  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Paid \
+  -t groups \
+  -v paid
+
 git checkout test_vault
 ```
 
