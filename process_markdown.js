@@ -140,7 +140,7 @@ async function build(){
   } 
   else {
     if (groups_to_publish.length != 0){
-      site_data = await generateBasicSiteData(pattern, groups_verification_function, offset_index)
+      site_data = await generateBasicSiteData(pattern, groups_verification_function, offset_index, groups_to_publish)
     }
     else {
       console.log("SHOULD WORK")
@@ -264,11 +264,14 @@ async function build(){
   console.log("DONE Building YAML Directory")
 
   console.log("Saving and moving the last couple files around")
-  console.log("INDEX")
-  console.log(site_data.filename_uuid["index"])
-  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
-  await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
-  console.log("Added index.md files")
+  if(Object.keys(site_data.filename_uuid).includes('index')) {
+    await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
+    await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
+    console.log("Setup index.md file for mkdocs")
+  }
+  else {
+    console.log("WARNING: NO INDEX FILE")
+  }
   const yamlData = yaml.stringify(fileStructure);
   let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml')
   await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have

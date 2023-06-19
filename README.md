@@ -181,10 +181,12 @@ node ./scripts/remove_value_from_key.js \
   -t groups \
   -v published
 
-node ./scripts/remove_value_from_key.js \
+node ./scripts/append_value_in_path.js \
   -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Paid \
   -t groups \
   -v paid
+
+node process_markdown.js -i './test_vault' -o './test_site' -oi 1 -g 'paid'
 
 git checkout test_vault
 ```

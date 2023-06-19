@@ -2,8 +2,9 @@
 uuid: 7f7eb252-211e-45a6-bec9-a7840a6d0078
 title: "The Devoured Chronicles: A Dog's Mischief and Redemption"
 share: false
+groups:
+  - paid
 ---
-
 In a realm of woes, where tales unfold,
 A man faced a trial, a story yet untold.
 His burden, a plight that stirred despair,
