@@ -6,7 +6,7 @@ import { Command } from 'commander';
 
 // File System Stuff
 import fs from 'fs'
-// import { glob } from 'glob';
+import { glob } from 'glob';
 
 // Markdown Stuff
 // import {fromMarkdown} from 'mdast-util-from-markdown'
@@ -259,6 +259,31 @@ async function build(){
     addFilePath(note.note_path, note.uuid);
   })
   console.log("DONE Building YAML Directory")
+
+  console.log("Moving static images in")
+  for (var i = 0; i < site_data.images.length; i++) {
+    console.log(`HELLO ${i}`)
+    for(let j = 0; j < site_data.images[i].image_links.length; j++){
+      if ( !site_data.images[i].image_links[j].includes('http')){
+        try {
+          let asset_path = await glob.sync(site_data['root_path'] + '**/' + site_data.images[i].image_links[j])
+          let asset_path_list = site_data.images[i].image_links[j].split('/')
+          let asset_file_name = asset_path_list[asset_path_list.length - 1];
+          let save_to_path = `${out_path}/${mkfiles_directory_name}/${asset_file_name}`
+          console.log(`asset_path = ${asset_path}`)
+          console.log(`save_to_path = ${save_to_path}`)
+          await fs.mkdirSync(`${out_path}/docs/`)
+          await fs.copyFileSync(asset_path.toString(), save_to_path)
+        }
+        catch (error) {
+          console.log(error); // Log the error object
+          console.log(error.message); // Log the error message as a string
+          console.log(`Could not find asset ${site_data.images[i].image_links[j]}`)
+        }
+      }
+    }
+  }
+  console.log("Done moving static images in")
 
   console.log("Saving and moving the last couple files around")
   delete site_data['files_with_no_uuid']
