@@ -143,6 +143,7 @@ async function build(){
     let parsed_yaml = {}
     parsed_yaml.uuid = uuidv4();
     parsed_yaml.share = false
+    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  doc.toString()
     await fs.writeFileSync(site_data.files_with_no_uuid[i], new_md_file)
   }
   delete site_data.files_with_no_uuid
