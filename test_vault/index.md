@@ -32,3 +32,7 @@ Now we need to to add some internal links,
 ## Test Image
 
 ![Grumpy Cat](https://i.chzbgr.com/full/9176023808/h68145F63/meme-cat-i-had-fun-once-it-was-awful-qutmamaco)
+
+## Test Local Image
+
+![Analysis Queries](AnalysisQueries.svg)

@@ -147,7 +147,6 @@ async function build(){
       site_data = await generateBasicSiteData(pattern, shared_verification_function, offset_index)
     }
   }
-  await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
   console.log("Added site_data.json")
   console.log(util.inspect(site_data, {showHidden: false, depth: null, colors: true}))
 
@@ -160,7 +159,6 @@ async function build(){
     let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  doc.toString()
     await fs.writeFileSync(site_data.files_with_no_uuid[i], new_md_file)
   }
-  delete site_data.files_with_no_uuid
   console.log("DONE adding front YAML to original files")
 
 
@@ -179,7 +177,6 @@ async function build(){
     await fs.writeFileSync(tmp_to_path, new_md_file)
     console.log(`Saved ${tmp_uuid} from ${filepaths_to_copy[i]}`)
   }
-  delete site_data.root_path
   console.log("DONE copying titled files to UUID's")
 
 
@@ -264,6 +261,9 @@ async function build(){
   console.log("DONE Building YAML Directory")
 
   console.log("Saving and moving the last couple files around")
+  delete site_data['files_with_no_uuid']
+  delete site_data['root_path']
+  await fs.writeFileSync(`${out_path}/site_data.json`, JSON.stringify(site_data, null, 2));
   if(Object.keys(site_data.filename_uuid).includes('index')) {
     await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/index.md`)
     await fs.copyFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.filename_uuid["index"]}.md`, `${out_path}/${mkfiles_directory_name}/index.md`)
