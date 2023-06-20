@@ -9,6 +9,9 @@ site
 private*
 python*
 out*
+*.db
+*.sqlite
+*.sqlite3
 # Logs
 logs
 *.log
