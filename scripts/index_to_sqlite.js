@@ -63,22 +63,23 @@ CREATE TABLE IF NOT EXISTS pkm_edges (
 	to_note_id    UUID
 )`
 
-// Create a new SQLite database connection
-console.log(`Connecting to ${db_file_path}`)
-// You can also specify a file path for a persistent database
-const db = await new sqlite3.Database(db_file_path);
-
 async function main() {
   let site_data = await JSON.parse(fs.readFileSync(`${in_path}site_data.json`));
-  await db.run(create_table_pkm_nodes);
-  await db.run(create_table_pkm_tags);
-  await db.run(create_table_pkm_edges);
+  // Create a new SQLite database connection
+  console.log(`Connecting to ${db_file_path}`)
+  // You can also specify a file path for a persistent database
+  const db = await new sqlite3.Database(db_file_path);
+  // Create the schema
+  db.serialize(() => {
+    db.run(create_table_pkm_nodes);
+    db.run(create_table_pkm_tags);
+    db.run(create_table_pkm_edges);
+  });
   for(var i = 0; i < site_data.uuid_list.length; i++){
     let note_uuid = site_data.uuid_list[i]
     let markdown_file_path = `${in_path}/markdown_files/${note_uuid}.md`
     let raw_markdown = fs.readFileSync(markdown_file_path)
     raw_markdown = String(raw_markdown)
-    console.log(raw_markdown)
     let syntax_tree = null
     let full_file_path = site_data.uuid_filepath[note_uuid] 
     let title = site_data.uuid_filename[note_uuid]
@@ -112,7 +113,6 @@ async function main() {
     // insertStmt.run('Jane Smith', 'jane@example.com');
     // insertStmt.run('Jane Smith', 'jane@example.com');
   }
-  process.exit(1)
 }
 main()
 // // Create the schema
