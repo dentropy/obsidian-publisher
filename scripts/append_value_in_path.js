@@ -18,7 +18,6 @@ program
   .option('-v, --value   <string>')
 program.parse(process.argv)
 const options = program.opts()
-
 console.log(options)
 let pattern = ''
 if (  !(Object.keys(options).includes("inpath"))  ){
