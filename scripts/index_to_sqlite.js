@@ -4,6 +4,7 @@ import fs from 'fs';
 
 import { extractYamlFromMarkdown } from '../lib/extractYamlFromMarkdown.js';
 
+import { v4 as uuidv4 } from 'uuid';
 // Thanks #ChatGPT 
 // [Node.js SQLite Schema & Data - A ShareGPT conversation](https://sharegpt.com/c/12ezu5X)
 
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS markdown_edges (
 	link_id       UUID PRIMARY_KEY,
 	label         VARCHAR,
 	from_note_id  UUID,
-	to_note_id    UUID
+	to_note_id    UUID,
+  metadata      JSON
 )`
 
 let create_table_markdown_key_values = `
@@ -89,7 +91,7 @@ async function main() {
   // You can also specify a file path for a persistent database
   const db = await new sqlite3.Database(db_file_path);
   // Create the schema
-  db.serialize(() => {
+  db.serialize(async () => {
     db.run(create_table_markdown_nodes);
     db.run(create_table_markdown_edges);
     db.run(create_table_markdown_key_values);
@@ -114,7 +116,7 @@ async function main() {
     // 	title            VARCHAR(1024),
     // 	yaml_json        JSON
     // )`
-    const insertStmt = db.prepare(`
+    let insertStmt = db.prepare(`
       INSERT INTO markdown_nodes (
         id,
         raw_markdown,
@@ -128,10 +130,60 @@ async function main() {
       full_file_path,
       full_file_path,
       yaml_json);
+    await insertStmt.finalize();
     // const insertStmt = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)');
     // insertStmt.run('Jane Smith', 'jane@example.com');
     // insertStmt.run('Jane Smith', 'jane@example.com');
   }
+  let embedded_note_links = Object.keys(site_data.embedded_note_links)
+  for(var i = 0; i < embedded_note_links.length; i++){
+    let metadata = site_data.embedded_note_links[embedded_note_links[i]]
+    if (metadata == undefined){
+      continue
+    }
+    if (metadata.length == 0){
+      continue
+    }
+    for(var j = 0; j < metadata.length; j++){
+        // CREATE TABLE IF NOT EXISTS markdown_edges (
+        //   link_id       UUID PRIMARY_KEY,
+        //   label         VARCHAR,
+        //   from_note_id  UUID,
+        //   to_note_id    UUID
+        // )
+        console.log(metadata)
+        // console.log(`METADATA ${Object.keys( metadata[j] )}`)
+        // console.log(`METADATA ${ embedded_note_links[i] }`)
+        // console.log(`METADATA ${ ( metadata[j].link )}`)
+      //   const insertStmt2 = db.prepare(`
+      //     INSERT INTO markdown_edges (
+      //       link_id,
+      //       label,
+      //       from_note_id,
+      //       to_note_id,
+      //       metadata
+      //     ) VALUES (?, ?, ?, ?, json(?)`)
+      //   console.log("FUCK")
+      //   try {
+      //     await insertStmt2.run(
+      //       uuidv4(), 
+      //       "embedded",
+      //       embedded_note_links[i],
+      //       metadata[j].link,
+      //       JSON.stringify(metadata[j]));
+      //     console.log("ME")
+      //     insertStmt2.finalize()
+      //     console.log("DAMMIT")
+      // }
+      // catch (error){
+      //   console.log("ERROR")
+      //   console.log(error)
+      // }
+    // const insertStmt = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)');
+    // insertStmt.run('Jane Smith', 'jane@example.com');
+    // insertStmt.run('Jane Smith', 'jane@example.com');
+  }
+}
 }
 main()
 // // Create the schema
