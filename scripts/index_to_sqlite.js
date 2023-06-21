@@ -145,45 +145,50 @@ async function main() {
       continue
     }
     for(var j = 0; j < metadata.length; j++){
-        // CREATE TABLE IF NOT EXISTS markdown_edges (
-        //   link_id       UUID PRIMARY_KEY,
-        //   label         VARCHAR,
-        //   from_note_id  UUID,
-        //   to_note_id    UUID
-        // )
-        console.log(metadata)
-        // console.log(`METADATA ${Object.keys( metadata[j] )}`)
-        // console.log(`METADATA ${ embedded_note_links[i] }`)
-        // console.log(`METADATA ${ ( metadata[j].link )}`)
-      //   const insertStmt2 = db.prepare(`
-      //     INSERT INTO markdown_edges (
-      //       link_id,
-      //       label,
-      //       from_note_id,
-      //       to_note_id,
-      //       metadata
-      //     ) VALUES (?, ?, ?, ?, json(?)`)
-      //   console.log("FUCK")
-      //   try {
-      //     await insertStmt2.run(
-      //       uuidv4(), 
-      //       "embedded",
-      //       embedded_note_links[i],
-      //       metadata[j].link,
-      //       JSON.stringify(metadata[j]));
-      //     console.log("ME")
-      //     insertStmt2.finalize()
-      //     console.log("DAMMIT")
-      // }
-      // catch (error){
-      //   console.log("ERROR")
-      //   console.log(error)
-      // }
-    // const insertStmt = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)');
-    // insertStmt.run('Jane Smith', 'jane@example.com');
-    // insertStmt.run('Jane Smith', 'jane@example.com');
+        const insertStmt2 = await db.prepare(`
+          INSERT INTO markdown_edges (
+            link_id,
+            label,
+            from_note_id,
+            to_note_id,
+            metadata
+          ) VALUES (?, ?, ?, ?, json(?))`)
+        await insertStmt2.run(
+              uuidv4(), 
+              "embedded",
+              embedded_note_links[i],
+              metadata[j].link,
+              JSON.stringify(metadata[j]));
+        await insertStmt2.finalize()
   }
 }
+  let note_links = Object.keys(site_data.note_links)
+  for(var i = 0; i < note_links.length; i++){
+      let metadata = site_data.note_links[note_links[i]]
+      if (metadata == undefined){
+        continue
+      }
+      if (metadata.length == 0){
+        continue
+      }
+      for(var j = 0; j < metadata.length; j++){
+          const insertStmt3 = await db.prepare(`
+            INSERT INTO markdown_edges (
+              link_id,
+              label,
+              from_note_id,
+              to_note_id,
+              metadata
+            ) VALUES (?, ?, ?, ?, json(?))`)
+          await insertStmt3.run(
+                uuidv4(), 
+                "linked",
+                note_links[i],
+                metadata[j].link,
+                JSON.stringify(metadata[j]));
+          await insertStmt3.finalize()
+    }
+  }
 }
 main()
 // // Create the schema
