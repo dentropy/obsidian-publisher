@@ -182,17 +182,29 @@ async function build(){
 
 
   console.log("STARTING Fixing wikilinks and embedding notes")
+  site_data.embedded_note_links = {}
+  site_data.note_links = {}
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let wikiEmbeds = await extractEmbeddedLinksFromMarkdown(site_data, doc.toString())
-    console.log("wikiEmbeds")
-    console.log(wikiEmbeds)
+    if (site_data.embedded_note_links[site_data.uuid_list[i]] != []){
+      site_data.embedded_note_links[site_data.uuid_list[i]] = wikiEmbeds
+    }
+    else {
+      site_data.embedded_note_links[site_data.uuid_list[i]].concat(wikiEmbeds)
+    }
     doc = await addInEmbeddedNotes(out_path, wikiEmbeds, doc.toString())
 
     // Changing WikiLinks to connect to UUID filename
     console.log(`Performing replaceWikiLinks on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let wikilinks = extractWikiLinksFromMarkdown(doc.toString())
+    if (site_data.note_links[site_data.uuid_list[i]] != []){
+      site_data.note_links[site_data.uuid_list[i]] = wikilinks
+    }
+    else {
+      site_data.note_links[site_data.uuid_list[i]].concat(wikilinks)
+    }
     for(var k = 0; k < wikilinks.length; k++){
       wikilinks[k].link = site_data.filename_uuid[wikilinks[k].link] 
     }
