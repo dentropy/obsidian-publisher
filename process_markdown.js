@@ -27,6 +27,7 @@ import { replaceWikiLinks } from './lib/replaceWikiLinks.js';
 import { generateBasicSiteData } from './lib/generateBasicSiteData.js';
 import { removeYamlFromMarkdown } from './lib/removeYamlFromMarkdown.js';
 import { extractYamlFromMarkdown } from './lib/extractYamlFromMarkdown.js';
+import { extractEmbeddedLinksFromMarkdown } from './lib/extractEmbeddedLinksFromMarkdown.js';
 // import { createRecursiveObject } from './lib/createRecursiveObject.js';
 // import { extractImagesFromMarkdown } from './lib/extractImagesFromMarkdown.js';
 // import { replaceYamlFrontMatter } from './lib/replaceYamlFrontMatter.js';
@@ -184,7 +185,10 @@ async function build(){
   for(var i = 0; i < site_data.uuid_list.length; i++){
     console.log(`Performing addInEmbeddedNotes on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
     let doc = await fs.readFileSync(`${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
-    doc = await addInEmbeddedNotes(site_data, doc.toString())
+    let wikiEmbeds = await extractEmbeddedLinksFromMarkdown(site_data, doc.toString())
+    console.log("wikiEmbeds")
+    console.log(wikiEmbeds)
+    doc = await addInEmbeddedNotes(out_path, wikiEmbeds, doc.toString())
 
     // Changing WikiLinks to connect to UUID filename
     console.log(`Performing replaceWikiLinks on ${out_path}/${mkfiles_directory_name}/${site_data.uuid_list[i]}.md`)
