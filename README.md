@@ -188,6 +188,7 @@ node ./scripts/append_value_in_path.js \
 
 node process_markdown.js -i './test_vault' -o './test_site' -oi 1 -g 'paid'
 
+bash test_build.sh
 rm test_site/pkm.sqlite
 node ./scripts/index_to_sqlite.js -i ./test_site
 sqlitebrowser ./test_site/pkm.sqlite

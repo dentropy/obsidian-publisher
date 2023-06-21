@@ -38,29 +38,48 @@ if (  (Object.keys(options).includes("dbfilepath"))  ){
   db_file_path = options.dbfilepath
 }
 
-let create_table_pkm_nodes = `
-CREATE TABLE IF NOT EXISTS pkm_nodes (
+let create_table_markdown_nodes = `
+CREATE TABLE IF NOT EXISTS markdown_nodes (
 	id               UUID PRIMARY KEY,
-	raw_markdown     text,
-	syntax_tree      JSON,
-	full_file_path   TEXT,
+	raw_markdown     TEXT,
+	full_file_path   VARCHAR(1024),
 	title            VARCHAR(1024),
-	yaml_json        JSON
+	yaml_json        JSON,
+	metadata         JSON
 )`
 
-let create_table_pkm_tags = `
-CREATE TABLE IF NOT EXISTS pkm_tags (
-	id       UUID PRIMARY_KEY,
-	note_id  UUID,
-	tag      VARCHAR(1024)
-)`
-
-let create_table_pkm_edges = `
-CREATE TABLE IF NOT EXISTS pkm_edges (
+let create_table_markdown_edges = `
+CREATE TABLE IF NOT EXISTS markdown_edges (
 	link_id       UUID PRIMARY_KEY,
 	label         VARCHAR,
 	from_note_id  UUID,
 	to_note_id    UUID
+)`
+
+let create_table_markdown_key_values = `
+CREATE TABLE IF NOT EXISTS markdown_key_values (
+	id         UUID PRIMARY_KEY,
+	note_id    UUID,
+	tag        VARCHAR(1024),
+	raw_value  TEXT,
+	json_value JSON
+)`
+
+let create_table_markdown_syntax_trees = `
+CREATE TABLE IF NOT EXISTS markdown_syntax_trees (
+	id               UUID PRIMARY KEY,
+	markdown_id      TEXT,
+	syntax_tree      JSON,
+	metadata         JSON
+)`
+
+
+let html_rendered_from_markdown = `
+CREATE TABLE IF NOT EXISTS html_rendered_from_markdown (
+	id               UUID PRIMARY KEY,
+	markdown_id      UUID,
+	html_content     TEXT,
+	metadata         JSON
 )`
 
 async function main() {
@@ -71,9 +90,11 @@ async function main() {
   const db = await new sqlite3.Database(db_file_path);
   // Create the schema
   db.serialize(() => {
-    db.run(create_table_pkm_nodes);
-    db.run(create_table_pkm_tags);
-    db.run(create_table_pkm_edges);
+    db.run(create_table_markdown_nodes);
+    db.run(create_table_markdown_edges);
+    db.run(create_table_markdown_key_values);
+    db.run(create_table_markdown_syntax_trees);
+    db.run(html_rendered_from_markdown);
   });
   for(var i = 0; i < site_data.uuid_list.length; i++){
     let note_uuid = site_data.uuid_list[i]
@@ -94,18 +115,16 @@ async function main() {
     // 	yaml_json        JSON
     // )`
     const insertStmt = db.prepare(`
-      INSERT INTO pkm_nodes (
+      INSERT INTO markdown_nodes (
         id,
         raw_markdown,
-        syntax_tree,
         full_file_path,
         title,
         yaml_json
-      ) VALUES (?, ?, json(?), ?, ?, json(?));`)
+      ) VALUES (?, ?, ?, ?, json(?));`)
     await  insertStmt.run(
       note_uuid, 
       raw_markdown,
-      syntax_tree,
       full_file_path,
       full_file_path,
       yaml_json);
