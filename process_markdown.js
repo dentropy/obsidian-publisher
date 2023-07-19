@@ -278,18 +278,22 @@ async function build(){
 
   console.log("Moving static images in")
   for (var i = 0; i < site_data.images.length; i++) {
-    console.log(`HELLO ${i}`)
+    console.log(`site_data.images: i =  ${i}`)
     for(let j = 0; j < site_data.images[i].image_links.length; j++){
       if ( !site_data.images[i].image_links[j].includes('http')){
         try {
           let asset_path = await glob.sync(site_data['root_path'] + '**/' + site_data.images[i].image_links[j])
           let asset_path_list = site_data.images[i].image_links[j].split('/')
           let asset_file_name = asset_path_list[asset_path_list.length - 1];
-          let save_to_path = `${out_path}/${mkfiles_directory_name}/${asset_file_name}`
+          let save_to_path = `./${out_path}/${mkfiles_directory_name}/${asset_file_name}`
           console.log(`asset_path = ${asset_path}`)
           console.log(`save_to_path = ${save_to_path}`)
-          await fs.mkdirSync(`${out_path}/docs/`)
-          await fs.copyFileSync(asset_path.toString(), save_to_path)
+          try {
+            await fs.mkdirSync(`${out_path}/docs/`)
+          } catch (error){
+            console.log(`${out_path}/docs/ already exists`)
+          }
+          await fs.copyFileSync(asset_path[0].toString(), save_to_path)
         }
         catch (error) {
           console.log(error); // Log the error object

@@ -36,3 +36,5 @@ Now we need to to add some internal links,
 ## Test Local Image
 
 ![Analysis Queries](AnalysisQueries.svg)
+
+![[Bad_Luck_Brian.jpg]]
