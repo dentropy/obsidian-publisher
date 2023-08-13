@@ -44,19 +44,24 @@ async function main(pattern, key, value){
     if (parsed_yaml == null ){
       parsed_yaml = {}
     }
-    if (value == "true" || value == "false"){
-      if (value == "false"){
-        parsed_yaml[key] = false
+    if (  Object.keys(parsed_yaml).includes(options.tag) ) {
+      if(parsed_yaml[options.tag] == false){
+        console.log(filepaths[i])
       }
-      if (value == "true"){
-        parsed_yaml[key] = true
+      if (options.value == "true" || options.value == "false"){
+        if(parsed_yaml[options.tag] == true && parsed_yaml[options.tag] == "true" ){
+          console.log(filepaths[i])
+        }
+        if(parsed_yaml[options.tag] == false && parsed_yaml[options.tag] == "false" ){
+          console.log(filepaths[i])
+        }
+      }
+      else {
+        if(parsed_yaml[options.tag] == options.value){
+          console.log(filepaths[i])
+        }
       }
     }
-    else {
-      parsed_yaml[key] = value
-    }
-    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + removeYamlFromMarkdown(doc.toString())
-    await fs.writeFileSync(filepaths[i], new_md_file)
   }
 }
 

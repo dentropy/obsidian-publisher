@@ -36,7 +36,7 @@ import { extractEmbeddedLinksFromMarkdown } from './lib/extractEmbeddedLinksFrom
 import { shared_verification_function } from './verification_functions/shared_verification_function.js';
 import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
 import { groups_verification_function } from './verification_functions/groups_verification_function.js';
-
+import { groups_verification_function_not_shared } from './verification_functions/groups_verification_function_not_shared.js';
 const program = new Command();
 program
   .name('dentropys-obsidian-publisher')
@@ -46,6 +46,7 @@ program
   .option('-oi, --offsetindex <int>')
   .option('-mkdn, --mkfilesfoldername <string>')
   .option('-ev, --entire_vault')
+  .option('-np, --not_public')
   .option('-g, --groupstopublish <string>')
 program.parse(process.argv)
 const options = program.opts()
@@ -141,7 +142,12 @@ async function build(){
   } 
   else {
     if (groups_to_publish.length != 0){
-      site_data = await generateBasicSiteData(pattern, groups_verification_function, offset_index, groups_to_publish)
+      if(options.not_public){
+        site_data = await generateBasicSiteData(pattern, groups_verification_function_not_shared, offset_index, groups_to_publish)
+      }
+      else {
+        site_data = await generateBasicSiteData(pattern, groups_verification_function, offset_index, groups_to_publish)
+      }
     }
     else {
       console.log("SHOULD WORK")
@@ -157,7 +163,7 @@ async function build(){
     let parsed_yaml = {}
     parsed_yaml.uuid = uuidv4();
     parsed_yaml.share = false
-    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  doc.toString()
+    let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  removeYamlFromMarkdown( doc.toString())
     await fs.writeFileSync(site_data.files_with_no_uuid[i], new_md_file)
   }
   console.log("DONE adding front YAML to original files")
@@ -323,5 +329,6 @@ async function build(){
   await fs.writeFileSync(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
   console.log("Built mkdocs.yaml")
   console.log("Built Markdown Completed Successfully")
+  console.log(options)
   process.exit(0);
 }
