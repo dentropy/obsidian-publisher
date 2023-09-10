@@ -22,6 +22,8 @@
   "homepage": "https://github.com/dentropy/dentropys-obsidian-publisher#readme",
   "dependencies": {
     "commander": "^11.0.0",
+    "extract-domain": "^4.1.4",
+    "extract-urls": "^1.4.0",
     "glob": "^10.2.2",
     "hast-util-to-html": "^8.0.4",
     "js-yaml": "^4.1.0",

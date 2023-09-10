@@ -1,5 +1,7 @@
 import sqlite3 from 'sqlite3'
 import fs from 'fs';
+import extractUrls  from "extract-urls"
+import extractDomain from 'extract-domain';
 
 
 import { extractYamlFromMarkdown } from '../lib/extractYamlFromMarkdown.js';
@@ -84,6 +86,33 @@ CREATE TABLE IF NOT EXISTS html_rendered_from_markdown (
 	metadata         JSON
 )`
 
+let urls_extracted_from_markdown = `
+CREATE TABLE IF NOT EXISTS urls_extracted_from_nodes (
+	markdown_node_id UUID,
+  url              TEXT,
+  domain           TEXT
+)`
+
+function gen_url_list(uuid, tmp_markdown){
+  let urls = extractUrls(tmp_markdown);
+  let domains = []
+  if(urls == undefined){
+    return false
+  }
+  urls.forEach(element => {
+    domains.push(extractDomain(element))
+  });
+  let insert_data = []
+  for(var i = 0; i < urls.length; i++){
+    insert_data.push([
+      uuid,
+      urls[i],
+      domains[i]
+    ])
+  }
+  return insert_data
+}
+
 async function main() {
   let site_data = await JSON.parse(fs.readFileSync(`${in_path}site_data.json`));
   // Create a new SQLite database connection
@@ -97,6 +126,7 @@ async function main() {
     db.run(create_table_markdown_key_values);
     db.run(create_table_markdown_syntax_trees);
     db.run(html_rendered_from_markdown);
+    db.run(urls_extracted_from_markdown);
   });
   for(var i = 0; i < site_data.uuid_list.length; i++){
     let note_uuid = site_data.uuid_list[i]
@@ -131,6 +161,24 @@ async function main() {
       full_file_path,
       yaml_json);
     await insertStmt.finalize();
+    let url_note_data = gen_url_list(note_uuid, raw_markdown)
+    if (url_note_data != false){
+      console.log(url_note_data)
+      insertStmt = db.prepare(`
+      INSERT INTO urls_extracted_from_nodes (
+        markdown_node_id,
+        url,
+        domain
+      ) VALUES (?, ?, ?)`)
+      url_note_data.forEach(async(url_list) => {
+        await insertStmt.run(
+          url_list[0],
+          url_list[1],
+          url_list[2]
+        ),
+        await insertStmt.finalize();
+      });
+    }
     // const insertStmt = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)');
     // insertStmt.run('Jane Smith', 'jane@example.com');
     // insertStmt.run('Jane Smith', 'jane@example.com');
