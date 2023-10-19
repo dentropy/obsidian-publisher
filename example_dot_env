@@ -1,5 +1,5 @@
 # Path to your PKM, probably want to back it up first
-pkm_in_path=/home/paul/home/Documents/RootBak
+pkm_in_path=/home/dentropy/home/Documents/Root
 
 # Output path in this folder where you want to build your site
 build_path='dentropy.github.io'
