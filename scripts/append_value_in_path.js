@@ -47,16 +47,21 @@ async function main(pattern, key, value){
     }
     if(Object.keys(parsed_yaml).includes(key)){
       if(Array.isArray(parsed_yaml[key])){
-        parsed_yaml[key].push(value)
+        if (!parsed_yaml[key].includes(value)){
+          parsed_yaml[key].push(value)
+        }
       }
       else {
-        old_value = parsed_yaml[key]
+        let old_value = parsed_yaml[key]
         parsed_yaml[key] = [value, old_value]
       }
     }
     else {
       parsed_yaml[key] = [value]
     }
+    // console.log(removeYamlFromMarkdown(doc.toString()))
+    console.log(JSON.stringify(parsed_yaml, null, 2))
+    console.log("\n\n\n")
     let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + removeYamlFromMarkdown(doc.toString())
     await fs.writeFileSync(filepaths[i], new_md_file)
   }

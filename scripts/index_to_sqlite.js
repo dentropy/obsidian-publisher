@@ -1,9 +1,16 @@
-import sqlite3 from 'sqlite3'
+import Database from 'better-sqlite3';
 import fs from 'fs';
 import extractUrls  from "extract-urls"
 import extractDomain from 'extract-domain';
 
-
+// Markdown Stuff
+import {fromMarkdown} from 'mdast-util-from-markdown'
+import {toMarkdown} from 'mdast-util-to-markdown'
+import { syntax } from 'micromark-extension-wiki-link'
+import * as wikiLink from 'mdast-util-wiki-link'
+import {frontmatter} from 'micromark-extension-frontmatter'
+import {frontmatterFromMarkdown, frontmatterToMarkdown} from 'mdast-util-frontmatter'
+import { removeYamlFromMarkdown } from "../lib/removeYamlFromMarkdown.js";
 import { extractYamlFromMarkdown } from '../lib/extractYamlFromMarkdown.js';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -55,9 +62,10 @@ let create_table_markdown_edges = `
 CREATE TABLE IF NOT EXISTS markdown_edges (
 	link_id       UUID PRIMARY_KEY,
 	label         VARCHAR,
-	from_note_id  UUID,
-	to_note_id    UUID,
-  metadata      JSON
+	from_node_id  UUID,
+  from_node_metadata JSON,
+	to_node_id    UUID,
+  to_node_metadata JSON
 )`
 
 let create_table_markdown_key_values = `
@@ -118,19 +126,30 @@ async function main() {
   // Create a new SQLite database connection
   console.log(`Connecting to ${db_file_path}`)
   // You can also specify a file path for a persistent database
-  const db = await new sqlite3.Database(db_file_path);
+  const db = await new Database(db_file_path);
   // Create the schema
-  db.serialize(async () => {
-    db.run(create_table_markdown_nodes);
-    db.run(create_table_markdown_edges);
-    db.run(create_table_markdown_key_values);
-    db.run(create_table_markdown_syntax_trees);
-    db.run(html_rendered_from_markdown);
-    db.run(urls_extracted_from_markdown);
-  });
+  let create_schema_queries = [
+    create_table_markdown_nodes,
+    create_table_markdown_edges,
+    create_table_markdown_key_values,
+    create_table_markdown_syntax_trees,
+    html_rendered_from_markdown,
+    urls_extracted_from_markdown
+  ]
+  await create_schema_queries.forEach(async (query) => {
+    // console.log(query)
+    const tmp_stmt = await db.prepare(query);
+    const info = await tmp_stmt.run();
+  })
+  console.log("site_data.uuid_list")
+  console.log(JSON.stringify(site_data.uuid_list, null, 2))
   for(var i = 0; i < site_data.uuid_list.length; i++){
     let note_uuid = site_data.uuid_list[i]
+    console.log("note_uuid")
+    console.log(note_uuid)
     let markdown_file_path = `${in_path}/markdown_files/${note_uuid}.md`
+    console.log("markdown_file_path")
+    console.log(markdown_file_path)
     let raw_markdown = fs.readFileSync(markdown_file_path)
     raw_markdown = String(raw_markdown)
     let syntax_tree = null
@@ -146,7 +165,27 @@ async function main() {
     // 	title            VARCHAR(1024),
     // 	yaml_json        JSON
     // )`
+
+    // START SYNTAX STREE
+    let tree = fromMarkdown(removeYamlFromMarkdown(raw_markdown), {
+      extensions: [frontmatter(['yaml', 'toml']), syntax()],
+      mdastExtensions: [frontmatterFromMarkdown(['yaml', 'toml']), wikiLink.fromMarkdown()]
+    })
+    console.log("Tree")
+    console.log(JSON.stringify(tree, null, 2))
     let insertStmt = db.prepare(`
+      INSERT INTO markdown_syntax_trees (
+        id,
+        syntax_tree,
+        metadata
+      ) VALUES (?, json(?), json(?));`)
+    await  insertStmt.run(
+      note_uuid, 
+      JSON.stringify(tree),
+      yaml_json);
+    // END SYNTEX TREE
+
+    insertStmt = db.prepare(`
       INSERT INTO markdown_nodes (
         id,
         raw_markdown,
@@ -160,31 +199,43 @@ async function main() {
       full_file_path,
       full_file_path,
       yaml_json);
-    await insertStmt.finalize();
+    console.log("insertStmt markdown_nodes")
+    console.log(JSON.stringify(insertStmt, null, 2))
+    // await insertStmt.run();
+    console.log("First Finalize Run")
     let url_note_data = gen_url_list(note_uuid, raw_markdown)
+    console.log("url_note_data Generates no problem")
+    console.log(url_note_data)
     if (url_note_data != false){
+      console.log("url_note_data")
       console.log(url_note_data)
-      insertStmt = db.prepare(`
-      INSERT INTO urls_extracted_from_nodes (
-        markdown_node_id,
-        url,
-        domain
-      ) VALUES (?, ?, ?)`)
+      console.log(JSON.stringify(url_note_data, null, 2))
       url_note_data.forEach(async(url_list) => {
+        console.log("url_list")
+        console.log(JSON.stringify(url_list, null, 2))
+        // The line below produces an error
+        insertStmt = db.prepare(`
+        INSERT INTO urls_extracted_from_nodes (
+          markdown_node_id,
+          url,
+          domain
+        ) VALUES (?, ?, ?)`)
+        console.log("insertStmt url_list")
+        console.log(JSON.stringify(insertStmt, null, 2))
         await insertStmt.run(
           url_list[0],
           url_list[1],
           url_list[2]
-        ),
-        await insertStmt.finalize();
+        )
+        // await insertStmt.finalize();
       });
     }
-    // const insertStmt = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)');
-    // insertStmt.run('Jane Smith', 'jane@example.com');
-    // insertStmt.run('Jane Smith', 'jane@example.com');
   }
   let embedded_note_links = Object.keys(site_data.embedded_note_links)
+  console.log("embedded_note_links")
+  console.log(JSON.stringify(embedded_note_links, null, 2))
   for(var i = 0; i < embedded_note_links.length; i++){
+    console.log(`METADATA TEST ${i} of ${embedded_note_links.length}`)
     let metadata = site_data.embedded_note_links[embedded_note_links[i]]
     if (metadata == undefined){
       continue
@@ -197,46 +248,71 @@ async function main() {
           INSERT INTO markdown_edges (
             link_id,
             label,
-            from_note_id,
-            to_note_id,
-            metadata
-          ) VALUES (?, ?, ?, ?, json(?))`)
+            from_node_id,
+            from_node_metadata,
+            to_node_id
+          ) VALUES (?, ?, ?, json(?), ?)`)
         await insertStmt2.run(
               uuidv4(), 
               "embedded",
               embedded_note_links[i],
-              metadata[j].link,
-              JSON.stringify(metadata[j]));
-        await insertStmt2.finalize()
+              JSON.stringify(metadata[j]),
+              metadata[j].link,);
+        // await insertStmt2.finalize()
   }
 }
   let note_links = Object.keys(site_data.note_links)
+  console.log("note_links_me")
+  console.log(JSON.stringify(note_links, null, 2))
   for(var i = 0; i < note_links.length; i++){
+    console.log(`note_links TEST ${i} of ${note_links.length}`)
       let metadata = site_data.note_links[note_links[i]]
+      console.log("metadata3")
+      console.log(JSON.stringify(metadata, null, 2))
       if (metadata == undefined){
+        console.log("Metadata = undefined Cont")
         continue
       }
       if (metadata.length == 0){
+        console.log("Metadata.length = undefined Cont")
         continue
       }
       for(var j = 0; j < metadata.length; j++){
+          console.log("Metadata 2")
+          console.log(JSON.stringify(metadata))
           const insertStmt3 = await db.prepare(`
             INSERT INTO markdown_edges (
               link_id,
               label,
-              from_note_id,
-              to_note_id,
-              metadata
-            ) VALUES (?, ?, ?, ?, json(?))`)
+              from_node_id,
+              from_node_metadata,
+              to_node_id
+            ) VALUES (?, ?, ?, json(?), ?)`)
+          console.log("ERROR TEST 2")
+          console.log(!Object.keys(metadata[j]).includes("link"))
+          if (!Object.keys(metadata[j]).includes("link")){
+            console.log("ERROR TEST 1")
+            metadata[j].link = ""
+          }
+          let test_intput_error = [
+            uuidv4(),
+            "linked",
+            note_links[i],
+            JSON.stringify(metadata[j]),
+            metadata[j].link
+          ]
+          console.log("TEST INPUT ERROR 1")
+          console.log(JSON.stringify(test_intput_error, null, 2))
           await insertStmt3.run(
-                uuidv4(), 
+                uuidv4(),
                 "linked",
                 note_links[i],
-                metadata[j].link,
-                JSON.stringify(metadata[j]));
-          await insertStmt3.finalize()
+                JSON.stringify(metadata[j]),
+                metadata[j].link);
+          // await insertStmt3.finalize()
     }
   }
+  await db.close()
 }
 main()
 // // Create the schema

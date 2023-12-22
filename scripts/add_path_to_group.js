@@ -56,6 +56,7 @@ async function main(pattern, key, value){
     if( !parsed_yaml.groups.includes(options.group_name)){
       parsed_yaml.groups.push(options.group_name)
     }
+    // console.log(removeYamlFromMarkdown(doc.toString()))
     let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' + removeYamlFromMarkdown(doc.toString())
     await fs.writeFileSync(filepaths[i], new_md_file)
   }

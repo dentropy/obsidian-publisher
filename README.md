@@ -15,11 +15,11 @@ This project build a static website using mkdocs from your obsidian vault. Pleas
 ``` bash
 python3 -m venv env
 source env/bin/activate
-pip3 install mkdocs
-pip3 install mkdocs-material
+python3 -m pip install mkdocs
+python3 -m pip install mkdocs-material
+python3 -m pip install mkdocs-backlinks
 # pip3 install git+https://github.com/danodic-dev/mkdocs-backlinks.git
 # pip3 install mkdocs-tooltipster-links-plugin
-# pip3 install mkdocs-backlinks
 # pip3 install mkdocs-preview-links-plugin
 
 git clone https://github.com/dentropy/dentropys-obsidian-publisher.git
@@ -134,66 +134,6 @@ $EDITOR .env
 bash container-build.sh
 bash container-run.sh
 sudo chown $USER:$USER ./pkm_out
-```
-
-## Scripts
-
-* Get all files in group
-* Get all files shared
-* Display hierarchy tree color coded based on shared or not shared
-* Share everything within glob path besides these hard coded notes
-* Do we also want a private variable, just to make things super safe?
-  * If we can script directories to share, we need a counter measure
-* Then we need to dump all this shit into sqlite
-
-``` bash
-
-node ./scripts/list_all_markdown_files.js -i /home/paul/Documents/Root -o out.json
-
-node ./scripts/save_site_data.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault \
-  -o out.json -oi 5 
-
-node ./scripts/update_and_insert_yaml_tags.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault \
-  -t groups \
-  -v test
-
-git checkout test_vault
-
-node ./scripts/update_and_insert_yaml_tags.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
-  -t groups \
-  -v blog
-
-node ./scripts/append_value_in_path.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
-  -t groups \
-  -v blog
-
-node ./scripts/append_value_in_path.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
-  -t groups \
-  -v published
-
-node ./scripts/remove_value_from_key.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Blog \
-  -t groups \
-  -v published
-
-node ./scripts/append_value_in_path.js \
-  -i /home/paul/Projects/dentropys-obsidian-publisher/test_vault/Paid \
-  -t groups \
-  -v paid
-
-node process_markdown.js -i './test_vault' -o './test_site' -oi 1 -g 'paid'
-
-bash test_build.sh
-rm test_site/pkm.sqlite
-node ./scripts/index_to_sqlite.js -i ./test_site
-sqlitebrowser ./test_site/pkm.sqlite
-
-git checkout test_vault
 ```
 
 ## Helper Bash
