@@ -70,7 +70,7 @@ async function main(){
         from 
             markdown_edges 
         where 
-            to_node_id = '${node_id.from_node_id}';
+            to_node_id = '${node_id.to_node_id}';
         `).all()
         console.log("get_links_to_this_node")
         console.log(get_links_to_this_node)
@@ -125,14 +125,22 @@ async function main(){
     console.log(backlink_backlog)
 
     // Generate markdown to insert and inser it
-    let backlink_markdown = "\n\n## Backlinks\n\n"
     await Object.keys(backlink_backlog).forEach(async (node) => {
+        let backlink_markdown = "\n\n## Backlinks\n\n"
         console.log("backlink_backlog_node")
         console.log(node)
+        console.log(backlink_backlog[node].length)
         // Read the file from the file system
-        await backlink_backlog[node].forEach(async (link) => {
-            backlink_markdown += `* [${link.title}](/${link.id})\n`
-        })
+        for( var i = 0; i < backlink_backlog[node].length; i++){
+
+            // backlink_backlog[node][i]
+            backlink_markdown += `* [${backlink_backlog[node][i].title}](/${backlink_backlog[node][i].id})\n`
+        }
+        console.log("backlink_markdown_three")
+        console.log(backlink_markdown)
+        // await backlink_backlog[node].forEach(async (link) => {
+        //     backlink_markdown += `* [${link.title}](/${link.id})\n`
+        // })
         // Append at end of file
         // Read file
         let doc = await fs.readFileSync(`${in_path}markdown_files/${node}.md`)
