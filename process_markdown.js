@@ -37,6 +37,7 @@ import { shared_verification_function } from './verification_functions/shared_ve
 import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
 import { groups_verification_function } from './verification_functions/groups_verification_function.js';
 import { groups_verification_function_not_shared } from './verification_functions/groups_verification_function_not_shared.js';
+
 const program = new Command();
 program
   .name('dentropys-obsidian-publisher')
@@ -50,7 +51,6 @@ program
   .option('-g, --groupstopublish <string>')
 program.parse(process.argv)
 const options = program.opts()
-
 console.log(options)
 let pattern = ''
 if (  !(Object.keys(options).includes("inpath"))  ){
@@ -63,7 +63,6 @@ else {
     pattern += '/'
   }
 }
-
 let out_path = ''
 if (  !(Object.keys(options).includes("outpath"))  ){
   console.log("You failed to set output path '-o $FOLDER_PATH' for you markdown documents")
@@ -72,15 +71,17 @@ if (  !(Object.keys(options).includes("outpath"))  ){
 else {
   out_path = options.outpath
 }
-
 let offset_index = 0
 if (  (Object.keys(options).includes("offsetindex"))  ){
   offset_index = options.offsetindex
 }
-
 let mkfiles_directory_name = 'markdown_files'
 if (  (Object.keys(options).includes("mkfilesfoldername"))  ){
   mkfiles_directory_name = options.mkfilesfoldername
+}
+let groups_to_publish = []
+if (  (Object.keys(options).includes("groupstopublish"))  ){
+  groups_to_publish = options.groupstopublish.split(' ')
 }
 
 function askForConfirmation(question) {
@@ -98,10 +99,6 @@ function askForConfirmation(question) {
   });
 }
 
-let groups_to_publish = []
-if (  (Object.keys(options).includes("groupstopublish"))  ){
-  groups_to_publish = options.groupstopublish.split(' ')
-}
 
 console.log(`pattern: ${pattern}`)
 console.log(`out_path: ${out_path}`)

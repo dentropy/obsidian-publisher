@@ -134,3 +134,16 @@ node ./scripts/update_and_insert_yaml_tags.js \
   -v blog
 
 ```
+
+## SQLite Rewrite Tests
+
+``` bash
+
+clear && rm -f ./test_site/pkm.sqlite
+
+node ./raw_to_sqlite.js \
+    -i './test_vault' \
+    -dbf ./test_site/pkm.sqlite \
+    -o './test_site' -oi 1 -g 'paid'
+
+```
