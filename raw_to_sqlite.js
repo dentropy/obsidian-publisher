@@ -133,8 +133,10 @@ async function build() {
     console.log(`mkfiles_directory_name: ${mkfiles_directory_name}`)
     console.log(`db_file_path: ${db_file_path}`)
     await fs.mkdirSync(out_path, { recursive: true });
-    await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}`, { recursive: true });
-
+    // await fs.mkdirSync(`${out_path}/docs/assets/images`, { recursive: true });
+    await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}/assets`, { recursive: true });
+    
+    
     // * Setup SQLite Database
     const db = await new Database(db_file_path);
     await create_schema_queries.forEach(async (query) => {
@@ -289,7 +291,7 @@ async function build() {
             }]
             for(var k = 0; k < content_assets.length;k++){
               if(content_assets[k].file_name == embed_links[embedded_index].link){
-                await fs.copyFileSync(content_assets[k].path, `./${out_path}/${mkfiles_directory_name}/${content_assets[k].file_name}`)
+                await fs.copyFileSync(content_assets[k].path, `${out_path}/${mkfiles_directory_name}/assets/${content_assets[k].file_name}`)
                 node_ids = [{
                   id : embed_links[embedded_index].link,
                   yaml_json : JSON.stringify({
