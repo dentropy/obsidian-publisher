@@ -23,6 +23,7 @@
   "dependencies": {
     "better-sqlite3": "^9.2.2",
     "commander": "^11.0.0",
+    "dataframe-js": "^1.4.4",
     "extract-domain": "^4.1.4",
     "extract-urls": "^1.4.0",
     "glob": "^10.2.2",
@@ -36,7 +37,8 @@
     "micromark-extension-frontmatter": "^1.1.0",
     "micromark-extension-wiki-link": "^0.0.4",
     "sqlite3": "^5.1.6",
-    "uuid": "^9.0.0",
+    "uuid": "^9.0.1",
+    "uuidv4": "^6.2.13",
     "yaml": "^2.2.2"
   },
   "type": "module"

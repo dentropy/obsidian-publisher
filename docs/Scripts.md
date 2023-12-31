@@ -139,11 +139,22 @@ node ./scripts/update_and_insert_yaml_tags.js \
 
 ``` bash
 
-clear && rm -f ./test_site/pkm.sqlite
+clear && rm -rf test_site2
 
 node ./raw_to_sqlite.js \
     -i './test_vault' \
-    -dbf ./test_site/pkm.sqlite \
-    -o './test_site' -oi 1 -g 'paid'
+    -dbf ./test_site2/pkm.sqlite \
+    -oi 1 \
+    -o './test_site2' -oi 1 -g 'paid'
+
+cd test_site2 && \
+  mkdocs build -v && \
+  cd docs && \
+  python3 -m http.server
+
+cd ...
+
+
+sqlitebrowser ./test_site/pkm.sqlite
 
 ```
