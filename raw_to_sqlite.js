@@ -186,6 +186,9 @@ async function build() {
         let raw_markdown = await fs.readFileSync(note_files[i])
         let parsed_yaml =  extractYamlFromMarkdown(raw_markdown.toString())
 
+        if(parsed_yaml == undefined){
+          parsed_yaml = {}
+        }
         // Add uuid's to files missing them
         if(!Object.keys(parsed_yaml).includes("uuid")){
           parsed_yaml.uuid = uuidv4();
@@ -210,16 +213,22 @@ async function build() {
             let title_split2 = title_split[title_split.length - 1].split(".")
             title_split2.pop()
             let title = title_split2.join(".")
-            await  insert_node_statement.run(
-                parsed_yaml.uuid, // id
-                raw_markdown.toString(), // raw_markdown
-                note_files[i], // full_file_path
-                title, // title
-                JSON.stringify(parsed_yaml));
+            try { 
+              await  insert_node_statement.run(
+                  parsed_yaml.uuid, // id
+                  raw_markdown.toString(), // raw_markdown
+                  note_files[i], // full_file_path
+                  title, // title
+                  JSON.stringify(parsed_yaml));
+            } catch (error) {
+              console.log(`\n\nError with uuid ${parsed_yaml.uuid} NOT INSERTING`)
+              console.log(`title ${title}`)
+              console.log(JSON.stringify(parsed_yaml, null, 2))
             }
         }
+    }
 
-    // Select all nodes in database
+    console.log("Select all nodes in database")
     let select_all_nodes = db.prepare('SELECT * FROM markdown_nodes;');
     let all_nodes_list = select_all_nodes.all();
     // console.log("all_nodes_list")
@@ -248,7 +257,7 @@ async function build() {
     * Update Node
 
 */
-    // * Get list of all content_assets
+    console.log("Get list of all content_assets")
     let asset_file_paths = await glob.sync(in_path + 'assets/**/*')
     let content_assets = []
     for( var i = 0; i < asset_file_paths.length; i++){
@@ -266,20 +275,23 @@ async function build() {
       let update_embedded_list = []
       let raw_markdown = current_node.raw_markdown
       let embed_links = embeddedLinksFind(raw_markdown)
+
       // * Loop through embeds
-      if(embed_links.length > 0){
+
+      
+      if (embed_links.length > 0 || embed_links == undefined) {
 
         // console.log("embed_links")
         // console.log(embed_links)
 
         for(var embedded_index = 0; embedded_index < embed_links.length; embedded_index++){
 
-          // * Check for title in Nodes table
+          console.log("Check for title in Nodes table")
           const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${embed_links[embedded_index].link}';`
           const node_ids_exec = db.prepare(select_ids_query);
           let node_ids = node_ids_exec.all();
 
-          // * Insert edge table
+          console.log("Insert edge table")
           let link_label = null;
           if(node_ids.length == 0 || node_ids == undefined){
             // * Check content_assets for matching file_name
@@ -304,7 +316,7 @@ async function build() {
             }
           }
           else {
-            // Get specifc Markdown and append to list
+            console.log("Get specifc Markdown and append to list")
             let embedded_markdown = await getEmbeddedMarkdown(node_ids[0].raw_markdown, embed_links[embedded_index].heading)
             
             // console.log("embed_links[embedded_index].heading")
@@ -341,26 +353,38 @@ async function build() {
       // console.log("current_node.id")
       // console.log(current_node.id)
 
-      let internal_links = internalLinksFind(raw_markdown)
+      let internal_links = await internalLinksFind(new_raw_markdown)
       let replacement_internal_links = []
       if(internal_links.length != 0){
 
         // console.log("internal_links")
         // console.log(internal_links)
-        
-        for(var p = 0; p < internal_links.length; p++){
-        // * Check for title in Nodes table
-          const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${internal_links[p].link}';`
-          const node_ids_exec = db.prepare(select_ids_query);
-          let node_ids = node_ids_exec.all();
+        try {
+          for(var p = 0; p < internal_links.length; p++){
+            // * Check for title in Nodes table
 
+              // console.log("internal_links[p]")
+              // console.log(internal_links[p])
 
-          if(node_ids.length != 0){
-            replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
-          }
-          else {
-            replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
-          }
+              const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = ?;`
+
+              // console.log("select_ids_query")
+              // console.log(select_ids_query)
+
+              const node_ids_exec = db.prepare(select_ids_query);
+              let node_ids = node_ids_exec.all(internal_links[p].link);
+    
+    
+              if(node_ids.length != 0){
+                replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
+              }
+              else {
+                replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
+              }
+            } 
+        } catch (error) {
+          console.log("ERROR")
+          console.log(error)
         }
         new_raw_markdown = internalLinksReplace(new_raw_markdown, replacement_internal_links) 
         
@@ -398,6 +422,9 @@ async function build() {
       // console.log("write_path")
       // console.log(write_path)
       let parsed_yaml =  extractYamlFromMarkdown(  current_node.rendered_markdown  )
+      if (parsed_yaml == undefined){
+        parsed_yaml = {}
+      }
 
       // Add uuid's to files missing them
       if(!Object.keys(parsed_yaml).includes("title")){
@@ -425,15 +452,17 @@ async function build() {
     all_nodes_list.forEach(node => {
       const key = node.full_file_path
       const value = node.id
-      
-      // console.log(`site_hierarchy key:${key},  value:${value} added`);
-      
-      let key_from_pkm_path = key.replace(site_data.root_path, "");
-      let split_filepath = key_from_pkm_path.split('/')
-      
-      let full_path_split = value.split("/")
-      // full_path_split = full_path_split.slice(offset_index, full_path_split.length - 1)
-      createRecursiveObject(site_data.site_hierarchy, split_filepath, full_path_split.join("/"));
+      if(key != undefined && value != undefined){
+        
+        // console.log(`site_hierarchy key:${key},  value:${value} added`);
+        
+        let key_from_pkm_path = key.replace(site_data.root_path, "");
+        let split_filepath = key_from_pkm_path.split('/')
+        
+        let full_path_split = value.split("/")
+        // full_path_split = full_path_split.slice(offset_index, full_path_split.length - 1)
+        createRecursiveObject(site_data.site_hierarchy, split_filepath, full_path_split.join("/"));
+      }
     });
 
     // let note_filepaths = Object.keys(site_data.filepath_uuid)

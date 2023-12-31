@@ -1,10 +1,14 @@
 #!/bin/bash
 export build_path='dentropy.github.io'
 source .env
-node process_markdown.js -i '/home/dentropy/Documents/Root' -o './dentropy.github.io' -oi 5
-# cd $build_path
-# git add .
-# git commit -m "Updated Site"
-# mkdocs build -v
-# git add .
-# git commit -m "Rebuilt site"
+echo 'build_path'
+echo $build_path
+rm -rf $build_path/markdown_flies/*md
+rm -rf $build_path/docs/*
+rm -rf $build_path/pkm.sqlite
+node raw_to_sqlite.js \
+    -dbf $build_path/pkm.sqlite \
+    -i $pkm_in_path \
+    -o $build_path \
+    -oi 5
+
