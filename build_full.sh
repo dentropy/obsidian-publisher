@@ -1,5 +1,4 @@
 #!/bin/bash
-export build_path='dentropy.github.io'
 source .env
 echo 'build_path'
 

@@ -292,28 +292,29 @@ async function build() {
           let node_ids = node_ids_exec.all();
 
           console.log("Insert edge table")
-          let link_label = null;
+          let link_label = "BROKEN";
           if(node_ids.length == 0 || node_ids == undefined){
-            // * Check content_assets for matching file_name
-            //   * Insert edge table
-            //   * Add to update embedded list
-            node_ids = [{
-              id : null,
-              yaml_json : null
-            }]
-            for(var k = 0; k < content_assets.length;k++){
-              if(content_assets[k].file_name == embed_links[embedded_index].link){
-                await fs.copyFileSync(content_assets[k].path, `${out_path}/${mkfiles_directory_name}/assets/${content_assets[k].file_name}`)
+                // * Check content_assets for matching file_name
+                //   * Insert edge table
+                //   * Add to update embedded list
                 node_ids = [{
-                  id : embed_links[embedded_index].link,
-                  yaml_json : JSON.stringify({
-                    type : "image"
-                  })
+                  id : null,
+                  yaml_json : null
                 }]
-                update_embedded_list.push(`![${content_assets[k].file_name}](./assets/${content_assets[k].file_name})`)
-                link_label = "IMAGE"
-              }
-            }
+                for(var k = 0; k < content_assets.length;k++){
+                  if(content_assets[k].file_name == embed_links[embedded_index].link){
+                    // console.log("FOUND IMAGE ASSET")
+                    await fs.copyFileSync(content_assets[k].path, `${out_path}/${mkfiles_directory_name}/assets/${content_assets[k].file_name}`)
+                    node_ids = [{
+                      id : embed_links[embedded_index].link,
+                      yaml_json : JSON.stringify({
+                        type : "ASSET"
+                      })
+                    }]
+                    update_embedded_list.push(`![${content_assets[k].file_name}](./assets/${content_assets[k].file_name})`)
+                    link_label = "ASSET"
+                  }
+                }
           }
           else {
             console.log("Get specifc Markdown and append to list")
@@ -324,6 +325,12 @@ async function build() {
             // console.log(embedded_markdown)
             update_embedded_list.push(embedded_markdown)
             link_label = "EMBEDDED"
+          }
+          if(node_ids.length == 0){
+            node_ids = [{
+              id : null,
+              yaml_json : null
+            }]
           }
           const insert_edge_statement = db.prepare(`
             INSERT INTO markdown_edges (
@@ -377,10 +384,42 @@ async function build() {
     
               if(node_ids.length != 0){
                 replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
+                node_ids = [{"id" : null, "yaml_json" : null}]
+                
               }
               else {
                 replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
               }
+
+              let link_label = "INTERNAL"
+              // console.log("\n\nnode_ids")
+              // console.log(node_ids)
+              if(node_ids.length == 0){
+                node_ids = [{
+                  id : null,
+                  yaml_json : null
+                }]
+              }
+              const insert_edge_statement = db.prepare(`
+              INSERT INTO markdown_edges (
+                link_id,
+                label,
+                from_node_id,
+                from_node_metadata,
+                link_mtadata,
+                to_node_id,
+                to_node_metadata
+              ) VALUES (?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
+              await insert_edge_statement.run(
+                  await uuidv4(), // link_id
+                  link_label, // label
+                  current_node.id, // from_node_id
+                  current_node.yaml_json, // from_node_metadata
+                  JSON.stringify( internal_links[p] ), // link_mtadata
+                  node_ids[0].id, // title
+                  node_ids[0].yaml_json
+              )
+              
             } 
         } catch (error) {
           console.log("ERROR")
