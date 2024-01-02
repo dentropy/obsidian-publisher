@@ -137,7 +137,7 @@ async function build() {
     await fs.mkdirSync(`${out_path}/${mkfiles_directory_name}/assets`, { recursive: true });
     
     
-    // * Setup SQLite Database
+    console.log("\nSetup SQLite Database")
     const db = await new Database(db_file_path);
     await create_schema_queries.forEach(async (query) => {
         // console.log(query)
@@ -146,12 +146,11 @@ async function build() {
     })
 
 
-    //* Glob all the files
+    console.log("\nGlob all the files")
     let note_files = await glob.sync(in_path + '**/*.md')
-    // console.log(JSON.stringify(note_files, null, 2))
 
-    // Select verification function
-    console.log("Setting check_rbac function")
+
+    console.log("Select verification function as check_rbac")
     let check_rbac = function() {return false}
     if (build_full_site == true){
         console.log("all_files_verification_function")
@@ -178,6 +177,8 @@ async function build() {
       }
     }
 
+
+    console.log("\nLoop though all globbed files adding nodes to database using check_rbac")
     // * Loop through all the globbed files
     // * if the groups match and is public
     //   * Save node to database
@@ -239,24 +240,7 @@ async function build() {
     }
     // console.log(JSON.stringify(all_nodes, null, 2))
 
-/*
 
-* Loop through nodes in database
-    * Get list of all content_assets
-    * Create update_embedded_list
-    * Check Embeded Note or Embedded Image
-      * Check nodes for matching node with title
-          * Insert edge table
-          * Add to update embedded list
-      * Check content_assets for matching file_name
-          * Insert edge table
-          * Add to update embedded list
-    * Get all internal markdown links
-      * Check nodes for matching node
-      * Add to update internal_links_list
-    * Update Node
-
-*/
     console.log("Get list of all content_assets")
     let asset_file_paths = await glob.sync(in_path + 'assets/**/*')
     let content_assets = []
@@ -268,6 +252,9 @@ async function build() {
         file_name : title_split2
       })
     }
+
+
+    console.log("Add in Embedded Links and move Assets")
     // console.log("content_assets")
     // console.log(content_assets)
     for(var i = 0; i < Object.keys(all_nodes).length; i++){
@@ -276,17 +263,13 @@ async function build() {
       let raw_markdown = current_node.raw_markdown
       let embed_links = embeddedLinksFind(raw_markdown)
 
-      // * Loop through embeds
 
-      
+      // Loop though all embeds
       if (embed_links.length > 0 || embed_links == undefined) {
-
         // console.log("embed_links")
         // console.log(embed_links)
-
         for(var embedded_index = 0; embedded_index < embed_links.length; embedded_index++){
-
-          console.log("Check for title in Nodes table")
+          //console.log("Check for title in Nodes table")
           const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${embed_links[embedded_index].link}';`
           const node_ids_exec = db.prepare(select_ids_query);
           let node_ids = node_ids_exec.all();
@@ -319,7 +302,6 @@ async function build() {
           else {
             console.log("Get specifc Markdown and append to list")
             let embedded_markdown = await getEmbeddedMarkdown(node_ids[0].raw_markdown, embed_links[embedded_index].heading)
-            
             // console.log("embed_links[embedded_index].heading")
             // console.log(embed_links[embedded_index].heading)
             // console.log(embedded_markdown)
@@ -355,11 +337,13 @@ async function build() {
       }
       let new_raw_markdown = await embeddedLinksReplace(current_node.raw_markdown, update_embedded_list)
 
+
       // console.log("\n\n\n")
       // console.log(new_raw_markdown)
       // console.log("current_node.id")
       // console.log(current_node.id)
 
+      console.log("Add in Internal Links to reference UUID")
       let internal_links = await internalLinksFind(new_raw_markdown)
       let replacement_internal_links = []
       if(internal_links.length != 0){
@@ -369,28 +353,20 @@ async function build() {
         try {
           for(var p = 0; p < internal_links.length; p++){
             // * Check for title in Nodes table
-
               // console.log("internal_links[p]")
               // console.log(internal_links[p])
-
               const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = ?;`
-
               // console.log("select_ids_query")
               // console.log(select_ids_query)
-
               const node_ids_exec = db.prepare(select_ids_query);
               let node_ids = node_ids_exec.all(internal_links[p].link);
-    
-    
               if(node_ids.length != 0){
                 replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
                 node_ids = [{"id" : null, "yaml_json" : null}]
-                
               }
               else {
                 replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
               }
-
               let link_label = "INTERNAL"
               // console.log("\n\nnode_ids")
               // console.log(node_ids)
@@ -426,12 +402,12 @@ async function build() {
           console.log(error)
         }
         new_raw_markdown = internalLinksReplace(new_raw_markdown, replacement_internal_links) 
-        
         // console.log(new_raw_markdown)
 
       }
 
 
+      console.log("\nUpdaing markdown_nodes with rendered markdown")
       // console.log(new_raw_markdown)
       const update_markdown_nodes_markdown = db.prepare(`
         UPDATE markdown_nodes
@@ -474,43 +450,30 @@ async function build() {
       else{ 
         await fs.writeFileSync(write_path, String(current_node.rendered_markdown)  )
       }
-
-
-
       if(current_node.title == "index"){
         await fs.writeFileSync(`${out_path}/markdown_files/index.md`, String(current_node.rendered_markdown)  )
       }
     }
 
-
-
-
-
-    console.log("STARTING Building YAML Directory")
+    console.log("Building YAML Directory")
     let site_data = { site_hierarchy : {} }
     all_nodes_list.forEach(node => {
       const key = node.full_file_path
       const value = node.id
       if(key != undefined && value != undefined){
-        
         // console.log(`site_hierarchy key:${key},  value:${value} added`);
-        
         let key_from_pkm_path = key.replace(site_data.root_path, "");
         let split_filepath = key_from_pkm_path.split('/')
-        
         let full_path_split = value.split("/")
         // full_path_split = full_path_split.slice(offset_index, full_path_split.length - 1)
         createRecursiveObject(site_data.site_hierarchy, split_filepath, full_path_split.join("/"));
       }
     });
-
     // let note_filepaths = Object.keys(site_data.filepath_uuid)
     let note_filepaths = all_nodes_list.sort((a, b) => a.title - b.title);
     let notes_with_metadata = []
     note_filepaths.forEach(node => {
-
-      console.log(node)
-      
+      // console.log(node)
       notes_with_metadata.push({
         note_path: node.full_file_path.slice(0, -3),
         uuid:  node.id,
@@ -520,25 +483,20 @@ async function build() {
     })
     notes_with_metadata.sort((a, b) => a.parsed_length - b.parsed_length);
     notes_with_metadata.reverse()
-    /// CHAT GPT Functions
-  
     // Initialize the data structure
     let fileStructure = [];
     // Function to add a file path and its contents to the file structure
     function addFilePath(filePath, contents ) {
       let currentLevel = fileStructure;
-  
       // Split the file path into individual directory names
       let directories = filePath.split('/');
       directories = directories.slice(offset_index,  directories.length)
       // Remove the filename from the directories array
       const fileName = directories.pop();
-  
       // Loop through each directory in the file path
       for (const directory of directories) {
         // Check if the directory already exists at the current level
         const existingDirectory = currentLevel.find(item => item.hasOwnProperty(directory));
-  
         // If the directory doesn't exist, create it
         if (!existingDirectory) {
           const newDirectory = {};
@@ -550,17 +508,17 @@ async function build() {
           currentLevel = existingDirectory[directory];
         }
       }
-  
       // Add the file to the final level
       const file = {};
       file[fileName] = contents;
       currentLevel.push(file);
     }
-  
     notes_with_metadata.forEach(note => {
       addFilePath(note.note_path, note.uuid);
     })
-    console.log("DONE Building YAML Directory")
+
+
+    console.log("\nSaving mkdocs yaml metadata")
     const yamlData = yaml.stringify(fileStructure);
     let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml')
     await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
