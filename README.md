@@ -147,3 +147,9 @@ git commit -m "Rebuilt site"
 git push origin main
 
 ```
+
+## Setup Analytics
+
+See [Plausible Analytics for Material](https://material-plausible-plugin.ale.sh/)
+
+Yaml already has what is required, just update it

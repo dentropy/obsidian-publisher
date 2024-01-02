@@ -9,6 +9,7 @@ theme:
     - navigation.tabs.sticky
     - navigation.footer
 plugins:
+  # - material-plausible
   - search:
       lang: en
 extra:
@@ -22,4 +23,8 @@ extra:
       link: https://github.com/dentropy
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/in/paulmullins-779/
+  # analytics:
+  #   provider: plausible
+  #   domain: ddaemon.org
+  #   src: "https://plausible.newatlantis.top/js/script.js"
 nav:
