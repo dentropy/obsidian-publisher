@@ -147,7 +147,7 @@ node ./raw_to_sqlite.js \
     -oi 1 \
     -o './test_site2' -oi 1 -g 'paid'
 
-cp ./test_site2/markdown_files/assets ./test_site2/docs/assets
+cp -r ./test_site2/markdown_files/assets ./test_site2/docs/assets
 
 cd test_site2 && \
   mkdocs build -v && \
@@ -157,6 +157,9 @@ cd test_site2 && \
 cd ...
 
 
-sqlitebrowser ./test_site/pkm.sqlite
+sqlitebrowser ./test_site2/pkm.sqlite
 
 ```
+
+## SQL Queries
+

@@ -23,7 +23,7 @@
 
 */
 
-import create_schema_queries from './scripts/create_schema_queries.js';
+import create_schema_queries from './create_schema_queries.js';
 import fs from 'fs'
 import { glob } from 'glob';
 import Database from 'better-sqlite3';
@@ -262,18 +262,17 @@ async function build() {
       let update_embedded_list = []
       let raw_markdown = current_node.raw_markdown
       let embed_links = embeddedLinksFind(raw_markdown)
-
-
       // Loop though all embeds
       if (embed_links.length > 0 || embed_links == undefined) {
         // console.log("embed_links")
         // console.log(embed_links)
         for(var embedded_index = 0; embedded_index < embed_links.length; embedded_index++){
           //console.log("Check for title in Nodes table")
-          const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${embed_links[embedded_index].link}';`
+          const select_ids_query = `SELECT id, raw_markdown, title, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${embed_links[embedded_index].link}';`
           const node_ids_exec = db.prepare(select_ids_query);
           let node_ids = node_ids_exec.all();
-
+          
+          
           console.log("Insert edge table")
           let link_label = "BROKEN";
           if(node_ids.length == 0 || node_ids == undefined){
@@ -300,6 +299,8 @@ async function build() {
                 }
           }
           else {
+            
+            
             console.log("Get specifc Markdown and append to list")
             let embedded_markdown = await getEmbeddedMarkdown(node_ids[0].raw_markdown, embed_links[embedded_index].heading)
             // console.log("embed_links[embedded_index].heading")
@@ -318,15 +319,17 @@ async function build() {
             INSERT INTO markdown_edges (
               link_id,
               label,
+              title,
               from_node_id,
               from_node_metadata,
               link_mtadata,
               to_node_id,
               to_node_metadata
-            ) VALUES (?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
+            ) VALUES (?, ?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
           await insert_edge_statement.run(
               await uuidv4(), // link_id
               link_label, // label
+              current_node.title, // #title
               current_node.id, // from_node_id
               current_node.yaml_json, // from_node_metadata
               JSON.stringify( embed_links[embedded_index] ), // link_mtadata
@@ -347,7 +350,6 @@ async function build() {
       let internal_links = await internalLinksFind(new_raw_markdown)
       let replacement_internal_links = []
       if(internal_links.length != 0){
-
         // console.log("internal_links")
         // console.log(internal_links)
         try {
@@ -355,47 +357,45 @@ async function build() {
             // * Check for title in Nodes table
               // console.log("internal_links[p]")
               // console.log(internal_links[p])
-              const select_ids_query = `SELECT id, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = ?;`
-              // console.log("select_ids_query")
-              // console.log(select_ids_query)
-              const node_ids_exec = db.prepare(select_ids_query);
+              const select_node_by_title_query = `SELECT id, title, raw_markdown, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = ?;`
+              const node_ids_exec = db.prepare(select_node_by_title_query);
               let node_ids = node_ids_exec.all(internal_links[p].link);
               if(node_ids.length != 0){
                 replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
-                node_ids = [{"id" : null, "yaml_json" : null}]
               }
               else {
                 replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
               }
               let link_label = "INTERNAL"
-              // console.log("\n\nnode_ids")
-              // console.log(node_ids)
               if(node_ids.length == 0){
                 node_ids = [{
                   id : null,
                   yaml_json : null
                 }]
               }
+              // console.log("\n\nInternal node_ids")
+              // console.log(node_ids)
               const insert_edge_statement = db.prepare(`
               INSERT INTO markdown_edges (
                 link_id,
                 label,
+                title,
                 from_node_id,
                 from_node_metadata,
                 link_mtadata,
                 to_node_id,
                 to_node_metadata
-              ) VALUES (?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
+              ) VALUES (?, ?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
               await insert_edge_statement.run(
                   await uuidv4(), // link_id
                   link_label, // label
+                  current_node.title, // #title
                   current_node.id, // from_node_id
                   current_node.yaml_json, // from_node_metadata
                   JSON.stringify( internal_links[p] ), // link_mtadata
                   node_ids[0].id, // title
                   node_ids[0].yaml_json
               )
-              
             } 
         } catch (error) {
           console.log("ERROR")
@@ -405,8 +405,6 @@ async function build() {
         // console.log(new_raw_markdown)
 
       }
-
-
       console.log("\nUpdaing markdown_nodes with rendered markdown")
       // console.log(new_raw_markdown)
       const update_markdown_nodes_markdown = db.prepare(`
@@ -420,6 +418,53 @@ async function build() {
         current_node.id
       )
     }
+
+
+
+    /*
+
+    * Adding in Backlinks
+
+    * Select all distinct nodes in the edges tables
+    * Loop through all nodes within the edges table
+    * Generate the Markdown to append to each file
+    * Get the rendered_markdown
+    * Update the rendered_markdown
+
+    */
+    console.log("\nAdd in Backlinks to Markdown")
+    let distinct_edge_backlinks = db.prepare(`SELECT DISTINCT to_node_id from markdown_edges where label='INTERNAL';`);
+    distinct_edge_backlinks = distinct_edge_backlinks.all();
+    await distinct_edge_backlinks.forEach(async(distinct_edge) => {
+      if(  distinct_edge.to_node_id != null  ){
+        console.log("distinct_edge")
+        console.log(distinct_edge)
+        console.log(distinct_edge.to_node_id)
+        // Get all edges to this node
+        let to_edge_nodes = db.prepare(`SELECT from_node_id, to_node_id, title from markdown_edges where to_node_id = ? and label='INTERNAL';`);
+        to_edge_nodes = to_edge_nodes.all(distinct_edge.to_node_id);
+        
+        let backlink_markdown = "\n\n#### Backlinks\n"
+        await to_edge_nodes.forEach(async(linked_edge) => {
+          console.log("linked_edge")
+          console.log(linked_edge)
+          backlink_markdown += `\n* [${linked_edge.title}](/${linked_edge.from_node_id})`
+        })
+        let node_to_update = db.prepare(`SELECT rendered_markdown from markdown_nodes where id = ?;`);
+        node_to_update = node_to_update.all(distinct_edge.to_node_id);
+        const update_markdown_nodes_markdown = db.prepare(`
+          UPDATE markdown_nodes
+          SET
+            rendered_markdown = ?
+          WHERE
+            id = ?;`)
+        await update_markdown_nodes_markdown.run(
+          node_to_update[0].rendered_markdown + backlink_markdown,
+          distinct_edge.to_node_id
+        )
+      }
+    })
+
 
     // Select all nodes in database
     select_all_nodes = db.prepare('SELECT * FROM markdown_nodes;');
@@ -441,8 +486,9 @@ async function build() {
         parsed_yaml = {}
       }
 
-      // Add uuid's to files missing them
-      if(!Object.keys(parsed_yaml).includes("title")){
+
+    // Adding titles to YAML for mkdocs
+    if(!Object.keys(parsed_yaml).includes("title")){
         parsed_yaml.title = current_node.title;
         let new_md_file = '---\n' + yaml.stringify(parsed_yaml) + '---\n' +  removeYamlFromMarkdown(  current_node.rendered_markdown )
         await fs.writeFileSync(write_path, String(new_md_file)  )

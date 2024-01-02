@@ -1,5 +1,5 @@
 ---
-share: false
+share: true
 title: Home
 uuid: 81ddc55c-7520-4449-b3fa-fa12a94129ef
 ---

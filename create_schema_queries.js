@@ -1,23 +1,24 @@
 let create_table_markdown_nodes = `
 CREATE TABLE IF NOT EXISTS markdown_nodes (
-	id               UUID PRIMARY KEY,
-	raw_markdown     TEXT,
-	rendered_markdown TEXT,
-	full_file_path   VARCHAR(1024),
-	title            VARCHAR(1024),
-	yaml_json        JSON,
-	metadata         JSON
+	id                 UUID PRIMARY KEY,
+	raw_markdown       TEXT,
+	rendered_markdown  TEXT,
+	full_file_path     VARCHAR(1024),
+	title              VARCHAR(1024),
+	yaml_json          JSON,
+	metadata           JSON
 )`
 
 let create_table_markdown_edges = `
 CREATE TABLE IF NOT EXISTS markdown_edges (
-	link_id       UUID PRIMARY_KEY,
-	label         VARCHAR,
-	from_node_id  UUID,
-  	from_node_metadata JSON,
-	link_mtadata JSON,
-	to_node_id    UUID,
-  	to_node_metadata JSON
+	link_id              UUID PRIMARY_KEY,
+	label                VARCHAR,
+	title                VARCHAR,
+	from_node_id         UUID,
+  	from_node_metadata   JSON,
+	link_mtadata         JSON,
+	to_node_id           UUID,
+  	to_node_metadata     JSON
 )`
 
 let create_table_markdown_key_values = `
