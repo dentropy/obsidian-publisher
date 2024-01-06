@@ -221,6 +221,7 @@ async function build() {
                   note_files[i], // full_file_path
                   title, // title
                   JSON.stringify(parsed_yaml));
+              console.log(`Inserted ${note_files[i]}`)
             } catch (error) {
               console.log(`\n\nError with uuid ${parsed_yaml.uuid} NOT INSERTING`)
               console.log(`title ${title}`)
@@ -405,7 +406,7 @@ async function build() {
         // console.log(new_raw_markdown)
 
       }
-      console.log("\nUpdaing markdown_nodes with rendered markdown")
+      console.log(`\nUpdaing markdown_nodes with rendered markdown for ${current_node.title}`)
       // console.log(new_raw_markdown)
       const update_markdown_nodes_markdown = db.prepare(`
         UPDATE markdown_nodes
@@ -437,7 +438,7 @@ async function build() {
     distinct_edge_backlinks = distinct_edge_backlinks.all();
     await distinct_edge_backlinks.forEach(async(distinct_edge) => {
       if(  distinct_edge.to_node_id != null  ){
-        console.log("distinct_edge")
+        console.log("\distinct_edge")
         console.log(distinct_edge)
         console.log(distinct_edge.to_node_id)
         // Get all edges to this node
@@ -446,7 +447,7 @@ async function build() {
         
         let backlink_markdown = "\n\n#### Backlinks\n"
         await to_edge_nodes.forEach(async(linked_edge) => {
-          console.log("linked_edge")
+          console.log("\nlinked_edge")
           console.log(linked_edge)
           backlink_markdown += `\n* [${linked_edge.title}](/${linked_edge.from_node_id})`
         })
@@ -501,7 +502,7 @@ async function build() {
       }
     }
 
-    console.log("Building YAML Directory")
+    console.log("\nBuilding YAML Directory")
     let site_data = { site_hierarchy : {} }
     all_nodes_list.forEach(node => {
       const key = node.full_file_path
