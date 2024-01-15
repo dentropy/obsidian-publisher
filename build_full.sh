@@ -1,7 +1,7 @@
 #!/bin/bash
 source .env
 echo 'build_path'
-
+echo $build_path
 ./build.sh
 
 # git commit -m "Updated Site"
