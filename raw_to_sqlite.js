@@ -86,7 +86,7 @@ let db_file_path = in_path + 'pkm.sqlite'
 if (  (Object.keys(options).includes("dbfilepath"))  ){
   db_file_path = options.dbfilepath
 }
-let custom_path = ""
+let custom_path = ".."
 if (  (Object.keys(options).includes("custom_path"))  ){
   custom_path = options.custom_path
 }
@@ -308,12 +308,16 @@ async function build() {
             
             
             console.log("Get specifc Markdown and append to list")
-            let embedded_markdown = await getEmbeddedMarkdown(node_ids[0].raw_markdown, embed_links[embedded_index].heading)
-            // console.log("embed_links[embedded_index].heading")
-            // console.log(embed_links[embedded_index].heading)
-            // console.log(embedded_markdown)
-            update_embedded_list.push(embedded_markdown)
-            link_label = "EMBEDDED"
+            try {
+              let embedded_markdown = await getEmbeddedMarkdown(node_ids[0].raw_markdown, embed_links[embedded_index].heading)
+              // console.log("embed_links[embedded_index].heading")
+              // console.log(embed_links[embedded_index].heading)
+              // console.log(embedded_markdown)
+              update_embedded_list.push(embedded_markdown)
+              link_label = "EMBEDDED"
+            } catch (error) {
+              console.log(`Get specifc Markdown and append to list\n${error}`)
+            }
           }
           if(node_ids.length == 0){
             node_ids = [{
