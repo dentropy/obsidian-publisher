@@ -63,6 +63,7 @@ program
   .option('-ev, --entire_vault')
   .option('-np, --not_public')
   .option('-g, --groupstopublish <string>')
+  .option('-cp, --custom_path <string>')
 program.parse(process.argv)
 const options = program.opts()
 console.log(options)
@@ -84,6 +85,10 @@ else {
 let db_file_path = in_path + 'pkm.sqlite'
 if (  (Object.keys(options).includes("dbfilepath"))  ){
   db_file_path = options.dbfilepath
+}
+let custom_path = ""
+if (  (Object.keys(options).includes("custom_path"))  ){
+  custom_path = options.custom_path
 }
 let out_path = ''
 if (  !(Object.keys(options).includes("outpath"))  ){
@@ -289,12 +294,12 @@ async function build() {
                     // console.log("FOUND IMAGE ASSET")
                     await fs.copyFileSync(content_assets[k].path, `${out_path}/${mkfiles_directory_name}/assets/${content_assets[k].file_name}`)
                     node_ids = [{
-                      id : embed_links[embedded_index].link,
+                      id :  embed_links[embedded_index].link,
                       yaml_json : JSON.stringify({
                         type : "ASSET"
                       })
                     }]
-                    update_embedded_list.push(`![${content_assets[k].file_name}](./assets/${content_assets[k].file_name})`)
+                    update_embedded_list.push(`![${content_assets[k].file_name}](${custom_path}/assets/${content_assets[k].file_name})`)
                     link_label = "ASSET"
                   }
                 }
@@ -362,10 +367,10 @@ async function build() {
               const node_ids_exec = db.prepare(select_node_by_title_query);
               let node_ids = node_ids_exec.all(internal_links[p].link);
               if(node_ids.length != 0){
-                replacement_internal_links.push(`[${internal_links[p].text}](/${node_ids[0].id})`)
+                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${node_ids[0].id})`)
               }
               else {
-                replacement_internal_links.push(`[${internal_links[p].text}](/${internal_links[p].link})`)
+                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${internal_links[p].link})`)
               }
               let link_label = "INTERNAL"
               if(node_ids.length == 0){
