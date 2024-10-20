@@ -18,6 +18,7 @@ source env/bin/activate
 python3 -m pip install mkdocs
 python3 -m pip install mkdocs-material
 python3 -m pip install mkdocs-backlinks
+python3 -m pip install material-plausible-plugin
 # pip3 install git+https://github.com/danodic-dev/mkdocs-backlinks.git
 # pip3 install mkdocs-tooltipster-links-plugin
 # pip3 install mkdocs-preview-links-plugin
