@@ -23,6 +23,7 @@ Now we need to to add some internal links,
 	* Alternative Title Test
 * [[Darwin and The Machines]]
 * [[Learning to Love Myself]]
+* [[NoStringTest]]
 
 ## Context Test
 
