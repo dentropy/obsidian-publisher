@@ -26,7 +26,7 @@
 import create_schema_queries from './create_schema_queries.js';
 import fs from 'fs'
 import { glob } from 'glob';
-import Database from 'better-sqlite3';
+import Database from 'libsql';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'yaml';
 
