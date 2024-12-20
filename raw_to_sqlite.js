@@ -64,6 +64,7 @@ program
   .option('-np, --not_public')
   .option('-g, --groupstopublish <string>')
   .option('-cp, --custom_path <string>')
+  .option('-am, --add_md_extensions')
 program.parse(process.argv)
 const options = program.opts()
 console.log(options)
@@ -89,6 +90,10 @@ if (  (Object.keys(options).includes("dbfilepath"))  ){
 let custom_path = ".."
 if (  (Object.keys(options).includes("custom_path"))  ){
   custom_path = options.custom_path
+}
+let add_md_extensions = ""
+if (  (Object.keys(options).includes("add_md_extensions"))  ){
+  add_md_extensions = '.md'
 }
 let out_path = ''
 if (  !(Object.keys(options).includes("outpath"))  ){
@@ -371,10 +376,10 @@ async function build() {
               const node_ids_exec = db.prepare(select_node_by_title_query);
               let node_ids = node_ids_exec.all(internal_links[p].link);
               if(node_ids.length != 0){
-                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${node_ids[0].id})`)
+                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${node_ids[0].id}${add_md_extensions})`)
               }
               else {
-                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${internal_links[p].link})`)
+                replacement_internal_links.push(`[${internal_links[p].text}](${custom_path}/${internal_links[p].link}${add_md_extensions})`)
               }
               let link_label = "INTERNAL"
               if(node_ids.length == 0){
