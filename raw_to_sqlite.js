@@ -279,9 +279,11 @@ async function build() {
         // console.log(embed_links)
         for(var embedded_index = 0; embedded_index < embed_links.length; embedded_index++){
           //console.log("Check for title in Nodes table")
-          const select_ids_query = `SELECT id, raw_markdown, title, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = '${embed_links[embedded_index].link}';`
+          const select_ids_query = `SELECT id, raw_markdown, title, yaml_json FROM markdown_nodes WHERE title COLLATE NOCASE = ?;`
+          console.log("select_ids_query")
+          console.log(select_ids_query)
           const node_ids_exec = db.prepare(select_ids_query);
-          let node_ids = node_ids_exec.all();
+          let node_ids = node_ids_exec.all(embed_links[embedded_index].link);
           
           
           console.log("Insert edge table")
@@ -330,27 +332,32 @@ async function build() {
               yaml_json : null
             }]
           }
-          const insert_edge_statement = db.prepare(`
-            INSERT INTO markdown_edges (
-              link_id,
-              label,
-              title,
-              from_node_id,
-              from_node_metadata,
-              link_mtadata,
-              to_node_id,
-              to_node_metadata
-            ) VALUES (?, ?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
-          await insert_edge_statement.run(
-              await uuidv4(), // link_id
-              link_label, // label
-              current_node.title, // #title
-              current_node.id, // from_node_id
-              current_node.yaml_json, // from_node_metadata
-              JSON.stringify( embed_links[embedded_index] ), // link_mtadata
-              node_ids[0].id, // title
-              node_ids[0].yaml_json
-          )
+          try {
+            const insert_edge_statement = db.prepare(`
+              INSERT INTO markdown_edges (
+                link_id,
+                label,
+                title,
+                from_node_id,
+                from_node_metadata,
+                link_mtadata,
+                to_node_id,
+                to_node_metadata
+              ) VALUES (?, ?, ?, ?, JSON(?), JSON(?), ?, JSON(?))`)
+            await insert_edge_statement.run(
+                await uuidv4(), // link_id
+                link_label, // label
+                current_node.title, // #title
+                current_node.id, // from_node_id
+                current_node.yaml_json, // from_node_metadata
+                JSON.stringify( embed_links[embedded_index] ), // link_mtadata
+                node_ids[0].id, // title
+                node_ids[0].yaml_json
+            )
+          } catch (error) {
+            console.log("ERROR inserting metadata or something")
+            console.log(error)
+          }
         }
       }
       let new_raw_markdown = await embeddedLinksReplace(current_node.raw_markdown, update_embedded_list)
@@ -416,22 +423,24 @@ async function build() {
           console.log("ERROR")
           console.log(error)
         }
-        new_raw_markdown = internalLinksReplace(new_raw_markdown, replacement_internal_links) 
-        // console.log(new_raw_markdown)
-
+        new_raw_markdown = internalLinksReplace(new_raw_markdown, replacement_internal_links)
       }
       console.log(`\nUpdaing markdown_nodes with rendered markdown for ${current_node.title}`)
-      // console.log(new_raw_markdown)
-      const update_markdown_nodes_markdown = db.prepare(`
-        UPDATE markdown_nodes
-        SET
-          rendered_markdown = ?
-        WHERE
-          id = ?;`)
-      await update_markdown_nodes_markdown.run(
-        new_raw_markdown,
-        current_node.id
-      )
+      try {
+        const update_markdown_nodes_markdown = db.prepare(`
+          UPDATE markdown_nodes
+          SET
+            rendered_markdown = ?
+          WHERE
+            id = ?;`)
+        await update_markdown_nodes_markdown.run(
+          new_raw_markdown,
+          current_node.id
+        ) 
+      } catch (error) {
+        console.log(`\nERROR: Updaing markdown_nodes with rendered markdown for ${current_node.title}`)
+        console.log(error)
+      }
     }
 
 
