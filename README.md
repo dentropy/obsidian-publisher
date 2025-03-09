@@ -1,6 +1,6 @@
 # dentropys-obsidian-publisher
 
-This project build a static website using mkdocs from your obsidian vault. Please note that this project adds YAML frontmatter to the notes in your existing vault for manging permissions and providing each note a UUID. If you don't like looking at frontmatter yaml in Obsidian you can install [hua03/obsidian-toggle-meta-yaml-plugin](https://github.com/hua03/obsidian-toggle-meta-yaml-plugin) from the community plugins page.
+This project build a static website using mkdocs from your obsidian vault. Please note that this project adds YAML frontmatter to the notes in your existing vault for manging permissions and providing each note a UUID. If you don't like looking at frontmatter yaml in Obsidian you can install [hua03/obsidian-toggle-meta-yaml-plugin](https://github.com/hua03/obsidian-toggle-meta-yaml-plugin) from the community plugins page, though this functionality is now built into obsidian by default now.
 
 ## Requirements
 
@@ -10,9 +10,26 @@ This project build a static website using mkdocs from your obsidian vault. Pleas
 * python3 + pip3
 * Folder of markdown files you want as a HTML website
 
-## Install
+## Install and Conigure Markdown
 
 ``` bash
+git clone https://github.com/dentropy/obsidian-publisher.git
+cd obsidian-publisher
+
+# Configure your Obsidian Root Folder
+cp .env.example .env
+vim .env
+npm install
+bash ./build.sh
+
+```
+
+#### Build static site
+``` bash
+cd obsidian-publisher
+source .env
+cd $build_path
+
 python3 -m venv env
 source env/bin/activate
 python3 -m pip install mkdocs
@@ -22,11 +39,7 @@ python3 -m pip install material-plausible-plugin
 # pip3 install git+https://github.com/danodic-dev/mkdocs-backlinks.git
 # pip3 install mkdocs-tooltipster-links-plugin
 # pip3 install mkdocs-preview-links-plugin
-
-git clone https://github.com/dentropy/dentropys-obsidian-publisher.git
-cd dentropys-obsidian-publisher
-npm install
-
+mkdocs build -v
 ```
 
 ## Build Static Site
