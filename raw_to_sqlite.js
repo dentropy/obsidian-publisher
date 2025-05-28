@@ -25,6 +25,7 @@
 
 import create_schema_queries from './create_schema_queries.js';
 import fs from 'fs'
+import path from 'path'
 import { glob } from 'glob';
 import Database from 'libsql';
 import { v4 as uuidv4 } from 'uuid';
@@ -65,6 +66,7 @@ program
   .option('-g, --groupstopublish <string>')
   .option('-cp, --custom_path <string>')
   .option('-am, --add_md_extensions')
+  .option('-it, --index_title')
 program.parse(process.argv)
 const options = program.opts()
 console.log(options)
@@ -103,13 +105,20 @@ if (  !(Object.keys(options).includes("outpath"))  ){
 else {
   out_path = options.outpath
 }
-let offset_index = 0
+const segments = path.normalize(options.inpath).split(path.sep).filter(segment => segment);
+let offset_index = segments.length + 1
 if (  (Object.keys(options).includes("offsetindex"))  ){
   offset_index = options.offsetindex
 }
 let mkfiles_directory_name = 'markdown_files'
 if (  (Object.keys(options).includes("mkfilesfoldername"))  ){
   mkfiles_directory_name = options.mkfilesfoldername
+}
+let index_title = 'index'
+if (  (Object.keys(options).includes("index_title"))  ){
+  index_title = options.index_title
+} else {
+  console.log("You can set the --index_title $filename minus the '.md' to set the homepage of the static site")
 }
 let build_full_site = false
 if (  (Object.keys(options).includes("entire_vault"))  ){
@@ -235,6 +244,8 @@ async function build() {
             } catch (error) {
               console.log(`\n\nError with uuid ${parsed_yaml.uuid} NOT INSERTING`)
               console.log(`title ${title}`)
+              console.log(error)
+              console.log("")
               console.log(JSON.stringify(parsed_yaml, null, 2))
             }
         }
@@ -520,7 +531,7 @@ async function build() {
       else{ 
         await fs.writeFileSync(write_path, String(current_node.rendered_markdown)  )
       }
-      if(current_node.title == "index"){
+      if(current_node.title == index_title){
         await fs.writeFileSync(`${out_path}/markdown_files/index.md`, String(current_node.rendered_markdown)  )
       }
     }
@@ -590,7 +601,10 @@ async function build() {
 
     console.log("\nSaving mkdocs yaml metadata")
     const yamlData = yaml.stringify(fileStructure);
-    let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml')
+    let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml', 'utf-8')
+    if(process.env.site_title != undefined && process.env.site_title != ""){
+      mkdocs_yml = mkdocs_yml.replaceAll("EXAMPLE_SITE_NAME", process.env.site_title)
+    }
     await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
     await fs.writeFileSync(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);
     console.log("Built mkdocs.yaml")
