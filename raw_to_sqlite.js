@@ -106,7 +106,10 @@ else {
   out_path = options.outpath
 }
 const segments = path.normalize(options.inpath).split(path.sep).filter(segment => segment);
-let offset_index = segments.length + 1
+let offset_index = segments.length
+if(options.inpath[0] == "1") {
+  segments.length += 1
+}
 if (  (Object.keys(options).includes("offsetindex"))  ){
   offset_index = options.offsetindex
 }
