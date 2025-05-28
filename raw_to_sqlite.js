@@ -110,6 +110,9 @@ let offset_index = segments.length
 if(options.inpath[0] == "1") {
   segments.length += 1
 }
+if(options.inpath.contains("$HOME")) {
+  segments.length += 1
+}
 if (  (Object.keys(options).includes("offsetindex"))  ){
   offset_index = options.offsetindex
 }
