@@ -107,7 +107,7 @@ else {
 }
 const segments = path.normalize(options.inpath).split(path.sep).filter(segment => segment);
 let offset_index = segments.length
-if(options.inpath[0] == "1") {
+if(options.inpath[0] == "~") {
   segments.length += 1
 }
 if(options.inpath.contains("$HOME")) {
