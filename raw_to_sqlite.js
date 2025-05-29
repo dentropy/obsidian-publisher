@@ -66,7 +66,7 @@ program
   .option('-g, --groupstopublish <string>')
   .option('-cp, --custom_path <string>')
   .option('-am, --add_md_extensions')
-  .option('-it, --index_title')
+  .option('-it, --index_title <string>')
 program.parse(process.argv)
 const options = program.opts()
 console.log(options)
@@ -106,13 +106,13 @@ else {
   out_path = options.outpath
 }
 const segments = path.normalize(options.inpath).split(path.sep).filter(segment => segment);
-let offset_index = segments.length
-if(options.inpath[0] == "~") {
-  segments.length += 1
-}
-if(String(options.inpath).includes("$HOME")) {
-  segments.length += 1
-}
+let offset_index = segments.length + 1
+// if(options.inpath[0] == "~") {
+//   segments.length += 2
+// }
+// if(String(options.inpath).includes("$HOME")) {
+//   segments.length += 2
+// }
 if (  (Object.keys(options).includes("offsetindex"))  ){
   offset_index = options.offsetindex
 }
@@ -123,6 +123,7 @@ if (  (Object.keys(options).includes("mkfilesfoldername"))  ){
 let index_title = 'index'
 if (  (Object.keys(options).includes("index_title"))  ){
   index_title = options.index_title
+  console.log(`options.index_title = ${options.index_title}`)
 } else {
   console.log("You can set the --index_title $filename minus the '.md' to set the homepage of the static site")
 }
@@ -610,6 +611,9 @@ async function build() {
     let mkdocs_yml = await fs.readFileSync('./mkdocs-bak.yml', 'utf-8')
     if(process.env.site_title != undefined && process.env.site_title != ""){
       mkdocs_yml = mkdocs_yml.replaceAll("EXAMPLE_SITE_NAME", process.env.site_title)
+    }
+    if(process.env.site_title != undefined && process.env.site_title != ""){
+      mkdocs_yml = mkdocs_yml.replaceAll("https://x.com", process.env.site_url)
     }
     await fs.writeFileSync(`${out_path}/mkdocs.json`, JSON.stringify(fileStructure, null, 2)); // This is technically not used, but a nice to have
     await fs.writeFileSync(`${out_path}/mkdocs.yaml`, mkdocs_yml + "\n" + yamlData);

@@ -1,5 +1,5 @@
 site_name: EXAMPLE_SITE_NAME
-site_url: https://dentropy.github.io/
+site_url: https://x.com
 docs_dir: markdown_files
 site_dir: docs
 theme:
@@ -16,9 +16,9 @@ extra:
   generator: true
   social:
     - icon: fontawesome/brands/twitter
-      link: https://twitter.com/PaulWMullins
+      link: https://x.com/huntingmeaning
     - icon: fontawesome/solid/paper-plane
-      link: mailto:dentropy@protonmail.com
+      link: mailto:paulmullins@protonmail.com
     - icon: fontawesome/brands/github
       link: https://github.com/dentropy
     - icon: fontawesome/brands/linkedin
