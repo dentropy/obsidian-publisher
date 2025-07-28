@@ -147,7 +147,6 @@ async function build() {
         // if Check file with check_rbac
         if (check_rbac(parsed_yaml, groups_to_publish)) {
             // Calculate document title from markdown path
-            console.log(markdown_filepath)
             let title_split = markdown_filepath.split("/")
             let title_split2 = title_split[title_split.length - 1].split(".")
             title_split2.pop()
@@ -179,5 +178,6 @@ async function build() {
             document_metadata.uuid_to_filepath[parsed_yaml.uuid] = markdown_filepath
         }
     }
+    console.log(`Read through ${note_files.length} notes`)
 }
 
