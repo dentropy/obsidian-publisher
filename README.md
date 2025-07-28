@@ -176,9 +176,14 @@ Yaml already has what is required, just update it
 
 ``` bash
 
-node raw_to_nostr.js -i './test_vault'
+node raw_to_nostr.js \
+-i './test_vault' \
+-nsec nsec1l7sllh4ja808yc5ej77zgu0l2ryv62uzvu2cfsc60tuwamc9zktqc5h000 \
+-burl https://mememaps.net \
+-be false \
+-rl wss://t.mememap.net
 
-node raw_to_nostr.js -i "$HOME/Documents/Root"
+node raw_to_nostr.js -i "$HOME/Documents/Root" -nsec nsec1l7sllh4ja808yc5ej77zgu0l2ryv62uzvu2cfsc60tuwamc9zktqc5h000
 
 time node raw_to_nostr.js -i "$HOME/Documents/Root"
 

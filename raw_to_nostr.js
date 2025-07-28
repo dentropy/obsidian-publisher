@@ -8,10 +8,31 @@ import { extractYamlFromMarkdown } from "./lib/extractYamlFromMarkdown.js";
 import { removeYamlFromMarkdown } from "./lib/removeYamlFromMarkdown.js";
 
 // Verification Functions
-import { shared_verification_function } from './verification_functions/shared_verification_function.js';
-import { all_files_verification_function } from './verification_functions/all_files_verification_function.js';
-import { groups_verification_function } from './verification_functions/groups_verification_function.js';
-import { groups_verification_function_not_shared } from './verification_functions/groups_verification_function_not_shared.js';
+import { shared_verification_function } from "./verification_functions/shared_verification_function.js";
+import { all_files_verification_function } from "./verification_functions/all_files_verification_function.js";
+import { groups_verification_function } from "./verification_functions/groups_verification_function.js";
+import { groups_verification_function_not_shared } from "./verification_functions/groups_verification_function_not_shared.js";
+
+// New Markdown Stuff
+import { embeddedLinksFind } from "./lib/embeddedLinksFind.js";
+import { embeddedLinksReplace } from "./lib/embeddedLinksReplace.js";
+import { getEmbeddedMarkdown } from "./lib/getEmbeddedMarkdown.js";
+import { internalLinksFind } from "./lib/internalLinksFind.js";
+import { internalLinksReplace } from "./lib/internalLinksReplace.js";
+
+import { BlossomUploader } from "@nostrify/nostrify/uploaders";
+import { encodeHex } from "@jsr/std__encoding/hex";
+import { NPool, NRelay1, NSecSigner } from "@nostrify/nostrify";
+import { getPublicKey, nip19, verifyEvent } from "@nostr/tools";
+import { NSchema as n } from "@nostrify/nostrify";
+export const my_pool = new NPool({
+  open: (url) => new NRelay1(url),
+  reqRouter: async (filters) => new Map([]),
+  eventRouter: async (
+    event,
+  ) => [],
+});
+
 
 // * Get CLI Arguments
 import { Command } from "commander";
@@ -28,10 +49,23 @@ program
     .option("-g, --groupstopublish <string>")
     .option("-cp, --custom_path <string>")
     .option("-am, --add_md_extensions")
-    .option("-it, --index_title <string>");
+    .option("-it, --index_title <string>")
+    .option("-nsec, --nsec <string>")
+    .option("-burl, --blossomurl <string>")
+    .option("-be, --blossomenable <boolean>")
+    .option("-rl, --relaylist <string>");
 program.parse(process.argv);
 const options = program.opts();
 console.log(options);
+
+const signer = new NSecSigner(nip19.decode(options.nsec).data);
+const uploader = new BlossomUploader({
+    servers: [
+        "https://blossom.mememaps.net",
+    ],
+    signer: signer,
+});
+
 let pattern = "";
 let in_path = "";
 if (!(Object.keys(options).includes("inpath"))) {
@@ -48,24 +82,25 @@ if (!(Object.keys(options).includes("inpath"))) {
     }
     pattern += "**/*.md";
 }
-let build_full_site = false
-if (  (Object.keys(options).includes("entire_vault"))  ){
-  const confirmed = await askForConfirmation('Are you sure you want to build EVERYTHING?');
-  if (confirmed) {
-    console.log('Alright let\'s build everything');
-    build()
-  } else {
-    console.log('Aborted.');
-    console.log("Ya gotta be careful")
-    process.exit(1);
-  }
-  await askForConfirmation();
-  console.log(`build_full_site: ${build_full_site}`)
-  build()
-}
-else {
-  console.log(`build_full_site: ${build_full_site}`)
-  build()
+let build_full_site = false;
+if ((Object.keys(options).includes("entire_vault"))) {
+    const confirmed = await askForConfirmation(
+        "Are you sure you want to build EVERYTHING?",
+    );
+    if (confirmed) {
+        console.log("Alright let's build everything");
+        build();
+    } else {
+        console.log("Aborted.");
+        console.log("Ya gotta be careful");
+        process.exit(1);
+    }
+    await askForConfirmation();
+    console.log(`build_full_site: ${build_full_site}`);
+    build();
+} else {
+    console.log(`build_full_site: ${build_full_site}`);
+    build();
 }
 let groups_to_publish = [];
 if ((Object.keys(options).includes("groupstopublish"))) {
@@ -102,29 +137,26 @@ let document_metadata = {
     "doc_by_uuid": {},
     "title_to_uuid": {},
     "uuid_to_filepath": {},
-}
-
+};
 
 function findDuplicates(arr) {
-  const seen = new Set();
-  const duplicates = new Set();
-  
-  arr.forEach(item => {
-    if (seen.has(item)) {
-      duplicates.add(item);
-    } else {
-      seen.add(item);
-    }
-  });
-  
-  return [...duplicates];
-}
+    const seen = new Set();
+    const duplicates = new Set();
 
+    arr.forEach((item) => {
+        if (seen.has(item)) {
+            duplicates.add(item);
+        } else {
+            seen.add(item);
+        }
+    });
+
+    return [...duplicates];
+}
 
 async function build() {
     console.log("\nGlob all the files");
     let note_files = await glob.sync(in_path + "**/*.md");
-
 
     // First we fetch all the document metadata for adding in links
     for (const markdown_filepath of note_files) {
@@ -147,37 +179,183 @@ async function build() {
         // if Check file with check_rbac
         if (check_rbac(parsed_yaml, groups_to_publish)) {
             // Calculate document title from markdown path
-            let title_split = markdown_filepath.split("/")
-            let title_split2 = title_split[title_split.length - 1].split(".")
-            title_split2.pop()
-            let title = title_split2.join(".")
-            if( document_metadata.doc_by_uuid[parsed_yaml.uuid] != undefined) {
-                throw new Error((JSON.stringify({
-                    error: "",
-                    description: "Duplicate UUID",
-                    file_path: markdown_filepath,
-                    title: title,
-                    parsed_yaml: parsed_yaml,
-                    other_document_parsed_yaml: document_metadata.doc_by_uuid[document_metadata.title_to_uuid[title]],
-                    other_document_filepath: document_metadata.uuid_to_filepath[document_metadata.title_to_uuid[title]],
-                }, null, 2)))
+            let title_split = markdown_filepath.split("/");
+            let title_split2 = title_split[title_split.length - 1].split(".");
+            title_split2.pop();
+            let title = title_split2.join(".");
+            if (document_metadata.doc_by_uuid[parsed_yaml.uuid] != undefined) {
+                throw new Error(JSON.stringify(
+                    {
+                        error: "",
+                        description: "Duplicate UUID",
+                        file_path: markdown_filepath,
+                        title: title,
+                        parsed_yaml: parsed_yaml,
+                        other_document_parsed_yaml: document_metadata
+                            .doc_by_uuid[
+                                document_metadata.title_to_uuid[title]
+                            ],
+                        other_document_filepath: document_metadata
+                            .uuid_to_filepath[
+                                document_metadata.title_to_uuid[title]
+                            ],
+                    },
+                    null,
+                    2,
+                ));
             }
-            if(  document_metadata.title_to_uuid[title] != undefined ) {
-                console.log(JSON.stringify({
-                    error: "",
-                    description: "Duplicate Title",
-                    file_path: markdown_filepath,
-                    title: title,
-                    parsed_yaml: parsed_yaml,
-                    other_document_parsed_yaml: document_metadata.doc_by_uuid[document_metadata.title_to_uuid[title]],
-                    other_document_filepath: document_metadata.uuid_to_filepath[document_metadata.title_to_uuid[title]],
-                }, null, 2))
+            if (document_metadata.title_to_uuid[title] != undefined) {
+                console.log(JSON.stringify(
+                    {
+                        error: "",
+                        description: "Duplicate Title",
+                        file_path: markdown_filepath,
+                        title: title,
+                        parsed_yaml: parsed_yaml,
+                        other_document_parsed_yaml: document_metadata
+                            .doc_by_uuid[
+                                document_metadata.title_to_uuid[title]
+                            ],
+                        other_document_filepath: document_metadata
+                            .uuid_to_filepath[
+                                document_metadata.title_to_uuid[title]
+                            ],
+                    },
+                    null,
+                    2,
+                ));
             }
-            document_metadata.doc_by_uuid[parsed_yaml.uuid] = parsed_yaml
-            document_metadata.title_to_uuid[title] = parsed_yaml.uuid
-            document_metadata.uuid_to_filepath[parsed_yaml.uuid] = markdown_filepath
+            document_metadata.doc_by_uuid[parsed_yaml.uuid] = parsed_yaml;
+            document_metadata.title_to_uuid[title] = parsed_yaml.uuid;
+            document_metadata.uuid_to_filepath[parsed_yaml.uuid] =
+                markdown_filepath;
         }
     }
-    console.log(`Read through ${note_files.length} notes`)
+    console.log(`Read through ${note_files.length} notes`);
+
+    console.log("Get list of all content_assets");
+    let asset_file_paths = await glob.sync(in_path + "assets/**/*", {
+        nodir: true,
+    });
+    let content_assets = [];
+    for (var i = 0; i < asset_file_paths.length; i++) {
+        let title_split = asset_file_paths[i].split("/");
+        let title_split2 = title_split[title_split.length - 1];
+        content_assets.push({
+            path: asset_file_paths[i],
+            file_name: title_split2,
+        });
+    }
+
+    for (let doc_uuid of Object.keys(document_metadata.uuid_to_filepath)) {
+        let raw_markdown = await fs.readFileSync(
+            document_metadata.uuid_to_filepath[doc_uuid],
+        );
+        let embed_links = embeddedLinksFind(raw_markdown);
+        let assets_to_embed = [];
+        for (let link of embed_links) {
+            for (let asset of content_assets) {
+                if (asset.file_name == link.link) {
+                    if (!("uploaded" in asset)) {
+                        asset.sha256 = await blossomUpload(asset);
+                    }
+                    console.log(asset);
+                    assets_to_embed.push(
+                        `![${asset.file_name}](${options.blossomurl}/${asset.sha256}.${
+                            asset.file_name.split(".").pop()
+                        })`,
+                    );
+                }
+            }
+        }
+        raw_markdown = await embeddedLinksReplace(
+            String(raw_markdown),
+            assets_to_embed,
+        );
+        let internal_links = await embeddedLinksFind(raw_markdown);
+        let markdown_links = [];
+        for (const link of internal_links) {
+            let naddr = "ERROR";
+            if (link.link in Object.keys(document_metadata.title_to_uuid)) {
+                naddr = nip19.naddrEncode({
+                    identifier: `${document_metadata.title_to_uuid[link.link]}`,
+                    pubkey: await signer.getPublicKey(),
+                    relays: options.relaylist.split(","),
+                    kind: 39561,
+                });
+                markdown_links.push(`nostr:${naddr}`);
+            } else {
+                naddr = nip19.naddrEncode({
+                    identifier: "yea-can-t-find-that",
+                    pubkey: await signer.getPublicKey(),
+                    relays: options.relaylist.split(","),
+                    kind: 39561,
+                });
+            }
+            markdown_links.push(`[${link.text}](nostr:${naddr})`);
+        }
+        let nostr_markdown = embeddedLinksReplace(raw_markdown, markdown_links);
+        let parsed_yaml = extractYamlFromMarkdown(raw_markdown.toString());
+        nostr_markdown = removeYamlFromMarkdown(nostr_markdown);
+
+        // TODO: Publish The Events
+        // TODO: Update The Yaml Frontmatter
+
+        let title_split = document_metadata.uuid_to_filepath[doc_uuid].split("/")
+        let title_split2 = title_split[title_split.length - 1].split(".");
+        title_split2.pop();
+        let title = title_split2.join(".")
+
+
+        let homepage = document_metadata.title_to_uuid["index"]
+        let tags = [
+            ["d", doc_uuid],
+            ["title", title],
+            ["format", "markdown"],
+            ["default_format", "markdown"],
+            ["visibility", "public"],
+            ["homepage", homepage]
+        ];
+        let eventToPublish = await signer.signEvent({
+            tags: tags,
+            content: nostr_markdown,
+            kind: 39561,
+            created_at: Math.floor((new Date()).getTime() / 1000)
+        })
+        console.log("eventToPublish")
+        console.log(eventToPublish)
+        await my_pool.event(eventToPublish, {relays: options.relaylist.split(",")})
+        console.log("Published Event")
+
+
+        console.log(tags);
+        console.log();
+        // console.log("\n\n\n")
+        // console.log(nostr_markdown)
+    }
 }
 
+async function blossomUpload(content_asset) {
+    try {
+        const buffer = await fs.readFileSync(content_asset.path);
+        const blob = new Blob([buffer]);
+        const sha256 = encodeHex(
+            await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()),
+        );
+        console.log(sha256);
+        content_asset.sha256 = sha256;
+        if (options.blossomenable == "true") {
+            const tags = await uploader.upload(blob);
+            content_asset.blossom = tags;
+        }
+        content_asset.uploaded = true;
+        return sha256;
+    } catch (error) {
+        console.log({
+            error: "",
+            description: "Unable to upload asset to blossom",
+            content_asset: content_asset,
+            raw_error: JSON.stringify(error),
+        });
+    }
+}

@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/dentropy/dentropys-obsidian-publisher#readme",
   "dependencies": {
+    "@nostr/tools": "npm:@jsr/nostr__tools@^2.15.2",
+    "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.4",
     "commander": "^11.0.0",
     "dataframe-js": "^1.4.4",
     "extract-domain": "^4.1.4",
