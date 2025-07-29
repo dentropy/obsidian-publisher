@@ -26,13 +26,12 @@ import { NPool, NRelay1, NSecSigner } from "@nostrify/nostrify";
 import { getPublicKey, nip19, verifyEvent } from "@nostr/tools";
 import { NSchema as n } from "@nostrify/nostrify";
 export const my_pool = new NPool({
-  open: (url) => new NRelay1(url),
-  reqRouter: async (filters) => new Map([]),
-  eventRouter: async (
-    event,
-  ) => [],
+    open: (url) => new NRelay1(url),
+    reqRouter: async (filters) => new Map([]),
+    eventRouter: async (
+        event,
+    ) => [],
 });
-
 
 // * Get CLI Arguments
 import { Command } from "commander";
@@ -137,6 +136,8 @@ let document_metadata = {
     "doc_by_uuid": {},
     "title_to_uuid": {},
     "uuid_to_filepath": {},
+    "site_directoriy": {},
+    "valid_filepaths": []
 };
 
 function findDuplicates(arr) {
@@ -229,6 +230,14 @@ async function build() {
             document_metadata.title_to_uuid[title] = parsed_yaml.uuid;
             document_metadata.uuid_to_filepath[parsed_yaml.uuid] =
                 markdown_filepath;
+            document_metadata.valid_filepaths.push(markdown_filepath.replace(in_path, ""))
+            document_metadata.site_directoriy = addToSiteDirectory(
+                document_metadata.site_directoriy,
+                options.inpath,
+                markdown_filepath,
+                title,
+                parsed_yaml,
+            );
         }
     }
     console.log(`Read through ${note_files.length} notes`);
@@ -298,43 +307,121 @@ async function build() {
         let parsed_yaml = extractYamlFromMarkdown(raw_markdown.toString());
         nostr_markdown = removeYamlFromMarkdown(nostr_markdown);
 
-        // TODO: Publish The Events
         // TODO: Update The Yaml Frontmatter
 
-        let title_split = document_metadata.uuid_to_filepath[doc_uuid].split("/")
+        let title_split = document_metadata.uuid_to_filepath[doc_uuid].split(
+            "/",
+        );
         let title_split2 = title_split[title_split.length - 1].split(".");
         title_split2.pop();
-        let title = title_split2.join(".")
+        let title = title_split2.join(".");
 
-
-        let homepage = document_metadata.title_to_uuid["index"]
+        let homepage = document_metadata.title_to_uuid["index"];
         let tags = [
             ["d", doc_uuid],
             ["title", title],
             ["format", "markdown"],
             ["default_format", "markdown"],
             ["visibility", "public"],
-            ["homepage", homepage]
+            ["homepage", homepage],
         ];
         let eventToPublish = await signer.signEvent({
             tags: tags,
             content: nostr_markdown,
             kind: 39561,
-            created_at: Math.floor((new Date()).getTime() / 1000)
-        })
-        console.log("eventToPublish")
-        console.log(eventToPublish)
-        await my_pool.event(eventToPublish, {relays: options.relaylist.split(",")})
-        console.log("Published Event")
-
-
-        console.log(tags);
-        console.log();
-        // console.log("\n\n\n")
-        // console.log(nostr_markdown)
+            created_at: Math.floor((new Date()).getTime() / 1000),
+        });
+        await my_pool.event(eventToPublish, {
+            relays: options.relaylist.split(","),
+        });
     }
+    console.log("\n\n\n");
+    console.log(document_metadata.site_directoriy)
+    console.log(document_metadata.valid_filepaths)
+    console.log(document_metadata.title_to_uuid)
+    console.log(filepathsToTree(document_metadata.valid_filepaths))
 }
 
+
+function filepathsToTree(filepaths) {
+  const tree = { id: 'root', label: '/', children: [] };
+
+  // Helper function to find or create a node in the tree
+  function findOrCreateNode(parent, pathParts, index, currentPath) {
+    if (index >= pathParts.length) return;
+
+    const part = pathParts[index];
+    const nodeId = currentPath ? `${currentPath}/${part}` : part;
+    let node = parent.children.find(child => child.label === part);
+
+    if (!node) {
+      let tmp_part = part.split(".").shift()
+      console.log("tmp_part")
+      console.log(tmp_part)
+      node = { id: nodeId, label: tmp_part, docID:document_metadata.title_to_uuid[tmp_part], children: [] };
+      parent.children.push(node);
+    }
+
+    findOrCreateNode(node, pathParts, index + 1, nodeId);
+  }
+
+  // Process each filepath
+  filepaths.forEach(filepath => {
+    // Remove leading slash and split into parts
+    const parts = filepath.replace(/^\/+/, '').split('/').filter(part => part);
+    findOrCreateNode(tree, parts, 0, '');
+  });
+
+  // Sort children alphabetically at each level
+  function sortChildren(node) {
+    node.children.sort((a, b) => a.label.localeCompare(b.label));
+    node.children.forEach(sortChildren);
+  }
+  sortChildren(tree);
+
+  return tree;
+}
+
+function addToSiteDirectory(
+    site_directory,
+    in_path,
+    file_path,
+    title,
+    parsed_yaml,
+) {
+    console.log("\n\n");
+    console.log("addToSiteDirectory");
+    file_path = file_path.replace(in_path, "");
+    let folders = file_path.split("/");
+    folders.pop();
+    if (folders[0] == "") {
+        folders.shift();
+    }
+    console.log("site_directory")
+    console.log(site_directory)
+    let tmp_directory = site_directory;
+    for (const folder of folders) {
+        console.log("folder")
+        console.log(folder)
+        if (folder in tmp_directory) {
+            tmp_directory = tmp_directory[folder];
+            console.log("Tried to get the folder")
+        } else {
+            tmp_directory[folder] = {
+                type: "folder"
+            };
+        }
+    }
+    console.log("site_directory")
+    console.log(site_directory)
+    console.log("tmp_directory[folder]")
+    console.log(tmp_directory)
+    tmp_directory[title] = {
+        type: "document",
+        uuid: parsed_yaml.uuid
+    };
+    return site_directory;
+}
 async function blossomUpload(content_asset) {
     try {
         const buffer = await fs.readFileSync(content_asset.path);
