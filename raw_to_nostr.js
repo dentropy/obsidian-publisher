@@ -339,7 +339,7 @@ async function build() {
     console.log(document_metadata.site_directoriy)
     console.log(document_metadata.valid_filepaths)
     console.log(document_metadata.title_to_uuid)
-    console.log(filepathsToTree(document_metadata.valid_filepaths))
+    console.log(JSON.stringify(filepathsToTree(document_metadata.valid_filepaths), null, 2))
 }
 
 
