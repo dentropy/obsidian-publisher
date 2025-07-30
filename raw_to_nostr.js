@@ -52,7 +52,9 @@ program
     .option("-nsec, --nsec <string>")
     .option("-burl, --blossomurl <string>")
     .option("-be, --blossomenable <boolean>")
-    .option("-rl, --relaylist <string>");
+    .option("-rl, --relaylist <string>")
+    .option("-ds, --documentationspace <string>")
+    .option("-dp, --defaultpage <string>");
 program.parse(process.argv);
 const options = program.opts();
 console.log(options);
@@ -137,7 +139,7 @@ let document_metadata = {
     "title_to_uuid": {},
     "uuid_to_filepath": {},
     "site_directoriy": {},
-    "valid_filepaths": []
+    "valid_filepaths": [],
 };
 
 function findDuplicates(arr) {
@@ -230,7 +232,9 @@ async function build() {
             document_metadata.title_to_uuid[title] = parsed_yaml.uuid;
             document_metadata.uuid_to_filepath[parsed_yaml.uuid] =
                 markdown_filepath;
-            document_metadata.valid_filepaths.push(markdown_filepath.replace(in_path, ""))
+            document_metadata.valid_filepaths.push(
+                markdown_filepath.replace(in_path, ""),
+            );
             document_metadata.site_directoriy = addToSiteDirectory(
                 document_metadata.site_directoriy,
                 options.inpath,
@@ -306,6 +310,35 @@ async function build() {
         let nostr_markdown = embeddedLinksReplace(raw_markdown, markdown_links);
         let parsed_yaml = extractYamlFromMarkdown(raw_markdown.toString());
         nostr_markdown = removeYamlFromMarkdown(nostr_markdown);
+        let internal_wiki_links = await internalLinksFind(nostr_markdown);
+        console.log("internal_wiki_links");
+        console.log(internal_wiki_links);
+        let replacement_internal_links = [];
+        if (internal_wiki_links.length != 0) {
+            for (const wiki_link of internal_wiki_links) {
+                if (
+                    document_metadata.title_to_uuid[wiki_link.link] != undefined
+                ) {
+                    let naddr = nip19.naddrEncode({
+                        identifier: `${options.documentationspace}:${
+                            document_metadata.title_to_uuid[wiki_link.link]
+                        }`,
+                        pubkey: await signer.getPublicKey(),
+                        relays: options.relaylist.split(","),
+                        kind: 39561,
+                    });
+                    replacement_internal_links.push(
+                        `[${wiki_link.text}](nostr:${naddr})`,
+                    );
+                } else {
+                    replacement_internal_links.push(
+                        `[${wiki_link.text}](./welost)`,
+                    );
+                }
+            }
+            console.log("PAUL_WAS_HERE");
+            console.log(replacement_internal_links);
+        }
 
         // TODO: Update The Yaml Frontmatter
 
@@ -319,67 +352,113 @@ async function build() {
         let homepage = document_metadata.title_to_uuid["index"];
         let tags = [
             ["d", doc_uuid],
+            ["ds", options.documentationspace],
             ["title", title],
             ["format", "markdown"],
             ["default_format", "markdown"],
             ["visibility", "public"],
             ["homepage", homepage],
         ];
+        console.log("\n\n\nnostr_markdown");
+        console.log(doc_uuid);
+        console.log(nostr_markdown);
+        console.log(tags);
         let eventToPublish = await signer.signEvent({
             tags: tags,
             content: nostr_markdown,
-            kind: 39561,
+            kind: 39761,
             created_at: Math.floor((new Date()).getTime() / 1000),
         });
         await my_pool.event(eventToPublish, {
             relays: options.relaylist.split(","),
         });
     }
+
     console.log("\n\n\n");
-    console.log(document_metadata.site_directoriy)
-    console.log(document_metadata.valid_filepaths)
-    console.log(document_metadata.title_to_uuid)
-    console.log(JSON.stringify(filepathsToTree(document_metadata.valid_filepaths), null, 2))
+    console.log(document_metadata.site_directoriy);
+    console.log(document_metadata.valid_filepaths);
+    console.log(document_metadata.title_to_uuid);
+    let my_pubkey = await signer.getPublicKey();
+    let directory_json = JSON.stringify(
+        filepathsToTree(document_metadata.valid_filepaths, my_pubkey),
+        null,
+        2,
+    );
+    let naddr = nip19.naddrEncode({
+        identifier: `${options.documentationspace}:${
+            document_metadata.title_to_uuid[options.defaultpage]
+        }`,
+        pubkey: await signer.getPublicKey(),
+        relays: options.relaylist.split(","),
+        kind: 39561,
+    });
+    let eventToPublish = await signer.signEvent({
+        tags: [
+            ["ds", options.documentationspace],
+            ["dp", naddr],
+        ],
+        content: directory_json,
+        kind: 39661,
+        created_at: Math.floor((new Date()).getTime() / 1000),
+    });
+    console.log("DIRECTORY_EVENT");
+    console.log(eventToPublish);
+    await my_pool.event(eventToPublish, {
+        relays: options.relaylist.split(","),
+    });
 }
 
+function filepathsToTree(filepaths, my_pubkey) {
+    const tree = { id: "root", label: "/", children: [] };
 
-function filepathsToTree(filepaths) {
-  const tree = { id: 'root', label: '/', children: [] };
+    // Helper function to find or create a node in the tree
+    function findOrCreateNode(parent, pathParts, index, currentPath) {
+        if (index >= pathParts.length) return;
 
-  // Helper function to find or create a node in the tree
-  function findOrCreateNode(parent, pathParts, index, currentPath) {
-    if (index >= pathParts.length) return;
+        const part = pathParts[index];
+        const nodeId = currentPath ? `${currentPath}/${part}` : part;
+        let node = parent.children.find((child) => child.label === part);
 
-    const part = pathParts[index];
-    const nodeId = currentPath ? `${currentPath}/${part}` : part;
-    let node = parent.children.find(child => child.label === part);
+        if (!node) {
+            let tmp_part = part.split(".").shift();
+            console.log("tmp_part");
+            let naddr = nip19.naddrEncode({
+                identifier: `${options.documentationspace}:${
+                    document_metadata.title_to_uuid[tmp_part]
+                }`,
+                pubkey: my_pubkey,
+                relays: options.relaylist.split(","),
+                kind: 39561,
+            });
+            node = {
+                id: nodeId,
+                label: tmp_part,
+                naddr: naddr,
+                children: [],
+            };
+            parent.children.push(node);
+        }
 
-    if (!node) {
-      let tmp_part = part.split(".").shift()
-      console.log("tmp_part")
-      console.log(tmp_part)
-      node = { id: nodeId, label: tmp_part, docID:document_metadata.title_to_uuid[tmp_part], children: [] };
-      parent.children.push(node);
+        findOrCreateNode(node, pathParts, index + 1, nodeId);
     }
 
-    findOrCreateNode(node, pathParts, index + 1, nodeId);
-  }
+    // Process each filepath
+    filepaths.forEach((filepath) => {
+        // Remove leading slash and split into parts
+        const parts = filepath.replace(/^\/+/, "").split("/").filter((part) =>
+            part
+        );
+        findOrCreateNode(tree, parts, 0, "");
+    });
 
-  // Process each filepath
-  filepaths.forEach(filepath => {
-    // Remove leading slash and split into parts
-    const parts = filepath.replace(/^\/+/, '').split('/').filter(part => part);
-    findOrCreateNode(tree, parts, 0, '');
-  });
+    // Sort children alphabetically at each level
+    function sortChildren(node) {
+        node.children.sort((a, b) => a.label.localeCompare(b.label));
+        node.children.forEach(sortChildren);
+    }
+    sortChildren(tree);
 
-  // Sort children alphabetically at each level
-  function sortChildren(node) {
-    node.children.sort((a, b) => a.label.localeCompare(b.label));
-    node.children.forEach(sortChildren);
-  }
-  sortChildren(tree);
-
-  return tree;
+    return tree;
 }
 
 function addToSiteDirectory(
@@ -389,36 +468,36 @@ function addToSiteDirectory(
     title,
     parsed_yaml,
 ) {
-    console.log("\n\n");
-    console.log("addToSiteDirectory");
+    // console.log("\n\n");
+    // console.log("addToSiteDirectory");
     file_path = file_path.replace(in_path, "");
     let folders = file_path.split("/");
     folders.pop();
     if (folders[0] == "") {
         folders.shift();
     }
-    console.log("site_directory")
-    console.log(site_directory)
+    // console.log("site_directory");
+    // console.log(site_directory);
     let tmp_directory = site_directory;
     for (const folder of folders) {
-        console.log("folder")
-        console.log(folder)
+        console.log("folder");
+        console.log(folder);
         if (folder in tmp_directory) {
             tmp_directory = tmp_directory[folder];
-            console.log("Tried to get the folder")
+            console.log("Tried to get the folder");
         } else {
             tmp_directory[folder] = {
-                type: "folder"
+                type: "folder",
             };
         }
     }
-    console.log("site_directory")
-    console.log(site_directory)
-    console.log("tmp_directory[folder]")
-    console.log(tmp_directory)
+    console.log("site_directory");
+    console.log(site_directory);
+    console.log("tmp_directory[folder]");
+    console.log(tmp_directory);
     tmp_directory[title] = {
         type: "document",
-        uuid: parsed_yaml.uuid
+        uuid: parsed_yaml.uuid,
     };
     return site_directory;
 }
