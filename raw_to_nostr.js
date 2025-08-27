@@ -290,30 +290,29 @@ async function build() {
         let markdown_links = [];
         for (const link of internal_links) {
             let naddr = "ERROR";
-            if (link.link in Object.keys(document_metadata.title_to_uuid)) {
+            console.log(Object.keys(document_metadata.title_to_uuid))
+            if ( Object.keys(document_metadata.title_to_uuid).includes(link.link)) {
                 naddr = nip19.naddrEncode({
-                    identifier: `${document_metadata.title_to_uuid[link.link]}`,
+                    identifier: `${options.documentationspace}:${document_metadata.title_to_uuid[link.link]}`,
                     pubkey: await signer.getPublicKey(),
                     relays: options.relaylist.split(","),
                     kind: 39561,
                 });
-                markdown_links.push(`nostr:${naddr}`);
+                markdown_links.push(`[${link.link}](nostr:${naddr})`);
             } else {
                 naddr = nip19.naddrEncode({
-                    identifier: "yea-can-t-find-that",
+                    identifier: `${options.documentationspace}:${yea-can-t-find-that}`,
                     pubkey: await signer.getPublicKey(),
                     relays: options.relaylist.split(","),
                     kind: 39561,
                 });
+                markdown_links.push(`[${link.text}](nostr:${naddr})`);
             }
-            markdown_links.push(`[${link.text}](nostr:${naddr})`);
         }
         let nostr_markdown = embeddedLinksReplace(raw_markdown, markdown_links);
         let parsed_yaml = extractYamlFromMarkdown(raw_markdown.toString());
         nostr_markdown = removeYamlFromMarkdown(nostr_markdown);
         let internal_wiki_links = await internalLinksFind(nostr_markdown);
-        console.log("internal_wiki_links");
-        console.log(internal_wiki_links);
         let replacement_internal_links = [];
         if (internal_wiki_links.length != 0) {
             for (const wiki_link of internal_wiki_links) {
@@ -337,8 +336,6 @@ async function build() {
                     );
                 }
             }
-            // console.log("PAUL_WAS_HERE");
-            // console.log(replacement_internal_links);
         }
 
         // TODO: Update The Yaml Frontmatter
@@ -410,7 +407,7 @@ async function build() {
             ["dp", naddr],
         ],
         content: directory_json,
-        kind: 39561,
+        kind: 39761,
         created_at: Math.floor((new Date()).getTime() / 1000),
     });
     // console.log("DIRECTORY_EVENT");
@@ -422,6 +419,7 @@ async function build() {
 }
 
 function filepathsToTree(filepaths, my_pubkey) {
+
     const tree = { id: "root", label: "/", children: [] };
 
     // Helper function to find or create a node in the tree
