@@ -157,6 +157,7 @@ function findDuplicates(arr) {
     return [...duplicates];
 }
 
+let published_events = [];
 async function build() {
     console.log("\nGlob all the files");
     let note_files = await glob.sync(in_path + "**/*.md");
@@ -336,8 +337,8 @@ async function build() {
                     );
                 }
             }
-            console.log("PAUL_WAS_HERE");
-            console.log(replacement_internal_links);
+            // console.log("PAUL_WAS_HERE");
+            // console.log(replacement_internal_links);
         }
 
         // TODO: Update The Yaml Frontmatter
@@ -359,25 +360,36 @@ async function build() {
             ["visibility", "public"],
             ["homepage", homepage],
         ];
-        console.log("\n\n\nnostr_markdown");
-        console.log(doc_uuid);
-        console.log(nostr_markdown);
-        console.log(tags);
+        // console.log("\n\n\nnostr_markdown");
+        // console.log(doc_uuid);
+        // console.log(nostr_markdown);
+        // console.log(tags);
         let eventToPublish = await signer.signEvent({
             tags: tags,
             content: nostr_markdown,
-            kind: 39761,
+            kind: 39561,
             created_at: Math.floor((new Date()).getTime() / 1000),
         });
         await my_pool.event(eventToPublish, {
             relays: options.relaylist.split(","),
         });
+        if (eventToPublish != undefined) {
+            // console.log(eventToPublish);
+            published_events.push(nip19.naddrEncode({
+                identifier: `${options.documentationspace}:${
+                    doc_uuid
+                }`,
+                pubkey: await signer.getPublicKey(),
+                relays: options.relaylist.split(","),
+                kind: 39561,
+            }));
+        }
     }
 
-    console.log("\n\n\n");
-    console.log(document_metadata.site_directoriy);
-    console.log(document_metadata.valid_filepaths);
-    console.log(document_metadata.title_to_uuid);
+    // console.log("\n\n\n");
+    // console.log(document_metadata.site_directoriy);
+    // console.log(document_metadata.valid_filepaths);
+    // console.log(document_metadata.title_to_uuid);
     let my_pubkey = await signer.getPublicKey();
     let directory_json = JSON.stringify(
         filepathsToTree(document_metadata.valid_filepaths, my_pubkey),
@@ -398,14 +410,15 @@ async function build() {
             ["dp", naddr],
         ],
         content: directory_json,
-        kind: 39661,
+        kind: 39561,
         created_at: Math.floor((new Date()).getTime() / 1000),
     });
-    console.log("DIRECTORY_EVENT");
-    console.log(eventToPublish);
+    // console.log("DIRECTORY_EVENT");
+    // console.log(eventToPublish);
     await my_pool.event(eventToPublish, {
         relays: options.relaylist.split(","),
     });
+    console.log(published_events);
 }
 
 function filepathsToTree(filepaths, my_pubkey) {
@@ -421,7 +434,7 @@ function filepathsToTree(filepaths, my_pubkey) {
 
         if (!node) {
             let tmp_part = part.split(".").shift();
-            console.log("tmp_part");
+            // console.log("tmp_part");
             let naddr = nip19.naddrEncode({
                 identifier: `${options.documentationspace}:${
                     document_metadata.title_to_uuid[tmp_part]
@@ -480,8 +493,8 @@ function addToSiteDirectory(
     // console.log(site_directory);
     let tmp_directory = site_directory;
     for (const folder of folders) {
-        console.log("folder");
-        console.log(folder);
+        // console.log("folder");
+        // console.log(folder);
         if (folder in tmp_directory) {
             tmp_directory = tmp_directory[folder];
             console.log("Tried to get the folder");
@@ -508,7 +521,7 @@ async function blossomUpload(content_asset) {
         const sha256 = encodeHex(
             await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()),
         );
-        console.log(sha256);
+        // console.log(sha256);
         content_asset.sha256 = sha256;
         if (options.blossomenable == "true") {
             const tags = await uploader.upload(blob);
