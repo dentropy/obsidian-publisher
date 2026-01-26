@@ -25,6 +25,6 @@ extra:
       link: https://www.linkedin.com/in/paulmullins-779/
   analytics:
     provider: plausible
-    domain: ddaemon.org
+    domain: mememaps.net
     src: "https://plausible.newatlantis.top/js/script.js"
 nav:
