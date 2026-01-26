@@ -236,10 +236,13 @@ async function build() {
                 title,
                 yaml_json
                 ) VALUES (?, ?, ?, ?, json(?));`)
+
+            // Calculate document title from markdown path
             let title_split = note_files[i].split("/")
             let title_split2 = title_split[title_split.length - 1].split(".")
             title_split2.pop()
             let title = title_split2.join(".")
+
             try { 
               await  insert_node_statement.run(
                   parsed_yaml.uuid, // id

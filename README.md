@@ -171,3 +171,22 @@ git push origin main
 See [Plausible Analytics for Material](https://material-plausible-plugin.ale.sh/)
 
 Yaml already has what is required, just update it
+
+## Nostr Version
+
+``` bash
+
+clear & node raw_to_nostr.js \
+-i $("pwd")'/test_vault' \
+-nsec nsec1qefu40tww6hsv362au9khlap9vt0jvrvtwu4rj2g82khvfc3uk0s2nxfdw \
+-burl https://blossom.mememaps.net \
+-be true \
+-ds test001 \
+-rl wss://t.mememap.net \
+-dp index
+
+node raw_to_nostr.js -i "$HOME/Documents/Root" -nsec nsec1l7sllh4ja808yc5ej77zgu0l2ryv62uzvu2cfsc60tuwamc9zktqc5h000
+
+time node raw_to_nostr.js -i "$HOME/Documents/Root"
+
+```
