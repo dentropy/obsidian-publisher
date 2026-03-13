@@ -26,5 +26,5 @@ extra:
   analytics:
     provider: plausible
     domain: mememaps.net
-    src: "https://plausible.newatlantis.top/js/script.js"
+    src: "https://plausible.mememaps.net/js/script.js"
 nav:
