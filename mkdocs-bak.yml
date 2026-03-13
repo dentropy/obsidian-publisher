@@ -16,13 +16,15 @@ extra:
   generator: true
   social:
     - icon: fontawesome/brands/twitter
-      link: https://x.com/huntingmeaning
+      link: https://x.com/mememapsdotnet
     - icon: fontawesome/solid/paper-plane
       link: mailto:paulmullins@protonmail.com
     - icon: fontawesome/brands/github
-      link: https://github.com/dentropy
+      link: https://github.com/Memex-Working-Group/
     - icon: fontawesome/brands/linkedin
-      link: https://www.linkedin.com/in/paulmullins-779/
+      link: https://www.linkedin.com/company/mememapsdotnet
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/j9DVjpguwd
   analytics:
     provider: plausible
     domain: mememaps.net
