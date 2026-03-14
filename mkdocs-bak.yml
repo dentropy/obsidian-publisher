@@ -1,5 +1,5 @@
 site_name: EXAMPLE_SITE_NAME
-site_url: https://x.com
+site_url: https://mememaps.net
 docs_dir: markdown_files
 site_dir: docs
 theme:
@@ -15,16 +15,16 @@ plugins:
 extra:
   generator: true
   social:
-    - icon: fontawesome/brands/twitter
-      link: https://x.com/mememapsdotnet
-    - icon: fontawesome/solid/paper-plane
-      link: mailto:paulmullins@protonmail.com
     - icon: fontawesome/brands/github
       link: https://github.com/Memex-Working-Group/
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/mememapsdotnet
     - icon: fontawesome/brands/discord
       link: https://discord.gg/j9DVjpguwd
+    - icon: fontawesome/brands/twitter
+      link: https://x.com/mememapsdotnet
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:paulmullins@protonmail.com
   analytics:
     provider: plausible
     domain: mememaps.net
